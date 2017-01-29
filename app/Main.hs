@@ -5,12 +5,14 @@ import Data.Time
 import Control.Monad (when)
 
 import CacheSize (maxCacheSize)
-import Cache (CacheSize, getCacheStatistic)
+import Cache (Cache, CacheSize, getCacheStatistic)
 import qualified LruHash as Lru
+import qualified Mfu
 
 data Opts = Opts
     { calcSize :: !Bool
     , lru :: !Bool
+    , mfu :: !Bool
     , logfile :: !String
     , cacheSize :: !Int
     }
@@ -25,6 +27,7 @@ optsParser = info
 programOptions =
     Opts <$> switch (long "size" <> help "Just calculate the minimal space need to store the data")
          <*> switch (long "lru" <> help "Test with an lru cache")
+         <*> switch (long "mfu" <> help "Test with an mfu cache")
          <*> strOption
                 (long "logfile" <> metavar "PATH" <> help "Path to the log file with file requests")
          <*> option auto
@@ -33,9 +36,10 @@ programOptions =
 
 main :: IO ()
 main = do
-    Opts {calcSize=calcSize, lru=calcLru, logfile=logPath, cacheSize=sizeOfCache} <- execParser optsParser
+    Opts {calcSize=calcSize, lru=calcLru, mfu=calcMfu, logfile=logPath, cacheSize=sizeOfCache} <- execParser optsParser
     when calcSize $ time $ calculateMaxCacheSize logPath
     when calcLru $ time $ calculateLru logPath sizeOfCache
+    when calcMfu $ time $ calculateMfu logPath sizeOfCache
 
 time :: IO () -> IO ()
 time ioFunc = do
@@ -49,9 +53,18 @@ calculateMaxCacheSize path = do
     cacheSizeInBytes <- maxCacheSize path
     putStrLn $ "The minimal needed size to hold the data is: " ++ show cacheSizeInBytes
 
+printStatistic :: Cache a => String -> String -> a -> IO ()
+printStatistic algorithmName logPath emptyCache = do
+    (hits, fails) <- getCacheStatistic logPath emptyCache
+    putStrLn $ algorithmName ++ " had " ++ show hits ++ " hits"
+    putStrLn $ algorithmName ++ " had " ++ show fails ++ " fails"
+
 calculateLru :: String -> CacheSize -> IO ()
 calculateLru logPath cacheSize = do
     let cache = Lru.empty cacheSize :: Lru.Lru
-    (hits, fails) <- getCacheStatistic logPath cache
-    putStrLn $ "Lru had " ++ show hits ++ " hits"
-    putStrLn $ "Lru had " ++ show fails ++ " fails"
+    printStatistic "LFU" logPath cache
+
+calculateMfu :: String -> CacheSize -> IO()
+calculateMfu logPath cacheSize = do
+    let cache = Mfu.empty cacheSize :: Mfu.Mfu
+    printStatistic "MFU" logPath cache

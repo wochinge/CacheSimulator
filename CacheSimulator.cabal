@@ -19,6 +19,7 @@ library
                      , Request
                      , Cache
                      , LruHash
+                     , Mfu
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , containers >= 0.5.9.1
