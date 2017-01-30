@@ -35,7 +35,7 @@ updateItem newPrio (Just (prio, size)) = (True, Just (newPrio, size))
 
 insert' :: File -> Lru -> Lru
 insert' f@(fileID, fileSize) cache@(cachedFiles, prio, cacheSize, maxCacheSize)
-    | fits fileSize cache = (H.insert fileID prio fileSize cachedFiles, prio + 1, cacheSize + fileSize, maxCacheSize)
+    | fits f cache = (H.insert fileID prio fileSize cachedFiles, prio + 1, cacheSize + fileSize, maxCacheSize)
     | otherwise = insert' f (removeLRU cache)
 
 removeLRU :: Lru -> Lru

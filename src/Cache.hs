@@ -55,8 +55,8 @@ hit (hits, fails) = (hits + 1, fails)
 fail :: CacheStatistic -> CacheStatistic
 fail (hits, fails) = (hits, fails + 1)
 
-fits :: Cache a => FileSize -> a -> Bool
-fits fileSize cache =
+fits :: Cache a => File -> a -> Bool
+fits (_, fileSize) cache =
     let cacheSize = size cache
         maxCacheSize = maxSize cache
         futureSize = fileSize + cacheSize

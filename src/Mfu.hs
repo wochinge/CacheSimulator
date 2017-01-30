@@ -34,7 +34,7 @@ updateItem (Just (prio, size)) = (True, Just (prio + 1, size))
 
 insert' :: File -> Mfu -> Mfu
 insert' f@(fileID, fileSize) cache@(cachedFiles, cacheSize, maxCacheSize)
-    | fits fileSize cache = (H.insert fileID 1 fileSize cachedFiles, cacheSize + fileSize, maxCacheSize)
+    | fits f cache = (H.insert fileID 1 fileSize cachedFiles, cacheSize + fileSize, maxCacheSize)
     | otherwise = insert' f (removeLFU cache)
 
 removeLFU :: Mfu -> Mfu
