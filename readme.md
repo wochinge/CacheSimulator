@@ -8,6 +8,8 @@ This is a small program do simulate different caching algorithms.
 -   `--size`: Calculates the minimal storage which would be needed to store all files
     (this is use useful if you want to set your cache size to fractions of the whole storage)
 -   `--lru`: Simulates a LRU cache
+-   `--mfu`: Simulates a MFU cache
+-   `--2q`: Simulates 2q (similar to Lru-2)
 -   `--cacheSize`: Allows you to set a cache size in bytes (default: 1 GB)
 
 ## Requirements
