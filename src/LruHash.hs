@@ -18,8 +18,7 @@ type Lru = (H.HashPSQ FileID FilePrio FileSize, FilePrio, CacheSize, CacheSize)
 instance Cache Lru where
     to = insert'
     update = updateCache'
-    remove (filedID, fileSize) (cachedFiles, prio, cacheSize, maxCacheSize) =
-        (H.delete filedID cachedFiles, prio, cacheSize - fileSize, maxCacheSize)
+    remove file cache = snd $ removeMaybe file cache
     empty maxCacheSize = (H.empty, 0, 0, maxCacheSize)
     size (_, _, size, _) = size
     maxSize (_, _, _, maxSize) = maxSize
@@ -47,3 +46,9 @@ removeLRU (cachedFiles, prio, cacheSize, maxCacheSize) =
 delete' :: Maybe (FileID, FilePrio, FileSize) -> (FileSize, Maybe (FileID, FilePrio, FileSize))
 delete' Nothing = (0, Nothing)
 delete' (Just (_, _, size)) = (size, Nothing)
+
+removeMaybe :: File -> Lru -> (Bool, Lru)
+removeMaybe (fileID, fileSize) (cachedFiles, prio, cacheSize, maxSize) =
+    let (removed, updatedFiles) = H.alter (\f -> (isJust f, Nothing)) fileID cachedFiles
+        newSize = if removed then cacheSize - fileSize else cacheSize
+    in (removed, (updatedFiles, prio, newSize, maxSize))
