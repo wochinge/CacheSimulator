@@ -1,18 +1,19 @@
 module Main where
 
-import Options.Applicative
 import Data.Time
 import Control.Monad (when)
-
+import Options.Applicative hiding (empty)
 import CacheSize (maxCacheSize)
-import Cache (Cache, CacheSize, getCacheStatistic)
+import Cache (Cache, empty, CacheSize, getCacheStatistic)
 import qualified LruHash as Lru
 import qualified Mfu
+import qualified Lru2Q
 
 data Opts = Opts
     { calcSize :: !Bool
     , lru :: !Bool
     , mfu :: !Bool
+    , lru2Q :: !Bool
     , logfile :: !String
     , cacheSize :: !Int
     }
@@ -26,20 +27,21 @@ optsParser = info
          "CacheSimulator - a program to calculate the effiency of different caching algorithms.")
 programOptions =
     Opts <$> switch (long "size" <> help "Just calculate the minimal space need to store the data")
-         <*> switch (long "lru" <> help "Test with an lru cache")
-         <*> switch (long "mfu" <> help "Test with an mfu cache")
+         <*> switch (long "lru" <> help "Test with a lru cache")
+         <*> switch (long "mfu" <> help "Test with a mfu cache")
+         <*> switch (long "2q" <> help "Test with a 2q cache")
          <*> strOption
                 (long "logfile" <> metavar "PATH" <> help "Path to the log file with file requests")
          <*> option auto
                (long "cacheSize" <> metavar "VALUE_IN_BYTE" <> value 1000000000 <> help "Cache size in byte")
 
-
 main :: IO ()
 main = do
-    Opts {calcSize=calcSize, lru=calcLru, mfu=calcMfu, logfile=logPath, cacheSize=sizeOfCache} <- execParser optsParser
-    when calcSize $ time $ calculateMaxCacheSize logPath
-    when calcLru $ time $ calculateLru logPath sizeOfCache
-    when calcMfu $ time $ calculateMfu logPath sizeOfCache
+    options@Opts {logfile=logPath, cacheSize=sizeOfCache} <- execParser optsParser
+    when (calcSize options) $ time $ calculateMaxCacheSize logPath
+    when (lru options) $ time $ calculateLru logPath sizeOfCache
+    when (mfu options) $ time $ calculateMfu logPath sizeOfCache
+    when (lru2Q options) $ time $ calculateLru2Q logPath sizeOfCache
 
 time :: IO () -> IO ()
 time ioFunc = do
@@ -66,5 +68,10 @@ calculateLru logPath cacheSize = do
 
 calculateMfu :: String -> CacheSize -> IO()
 calculateMfu logPath cacheSize = do
-    let cache = Mfu.empty cacheSize :: Mfu.Mfu
+    let cache = empty cacheSize :: Mfu.Mfu
     printStatistic "MFU" logPath cache
+
+calculateLru2Q :: String -> CacheSize -> IO()
+calculateLru2Q logPath cacheSize = do
+    let cache = empty cacheSize :: Lru2Q.Lru2Q
+    printStatistic "2Q" logPath cache

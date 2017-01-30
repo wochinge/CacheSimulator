@@ -7,7 +7,7 @@ module LruHash
     , removeAndRetrieveLRU
     , updateCache
     ) where
-import qualified Data.HashPSQ as H (HashPSQ(..), insert, empty, alter, alterMin, delete)
+import qualified Data.HashPSQ as H (HashPSQ(..), insert, empty, alter, alterMin, delete, member)
 import Request
 import Cache
 import Data.Maybe(isJust)
@@ -40,16 +40,23 @@ insert' f@(fileID, fileSize) cache@(cachedFiles, prio, cacheSize, maxCacheSize)
     | otherwise = insert' f (removeLRU cache)
 
 removeLRU :: Lru -> Lru
-removeLRU (cachedFiles, prio, cacheSize, maxCacheSize) =
-    let (sizeOfRemoved, updated) = H.alterMin delete' cachedFiles
-    in (updated, prio, cacheSize - sizeOfRemoved, maxCacheSize)
+removeLRU cache = snd $ removeAndRetrieveLRU cache
 
-delete' :: Maybe (FileID, FilePrio, FileSize) -> (FileSize, Maybe (FileID, FilePrio, FileSize))
-delete' Nothing = (0, Nothing)
-delete' (Just (_, _, size)) = (size, Nothing)
+removeAndRetrieveLRU :: Lru -> (File, Lru)
+removeAndRetrieveLRU (cachedFiles, prio, cacheSize, maxCacheSize) =
+    let (Just f@(_, sizeOfRemoved), updated) = H.alterMin removeAndRetrieve cachedFiles
+        newSize = cacheSize - sizeOfRemoved
+    in (f, (updated, prio, newSize, maxCacheSize))
+
+removeAndRetrieve :: Maybe (FileID, FilePrio, FileSize) -> (Maybe File, Maybe (FileID, FilePrio, FileSize))
+removeAndRetrieve Nothing = (Nothing, Nothing)
+removeAndRetrieve (Just (fileID, _, size)) = (Just (fileID, size), Nothing)
 
 removeMaybe :: File -> Lru -> (Bool, Lru)
 removeMaybe (fileID, fileSize) (cachedFiles, prio, cacheSize, maxSize) =
     let (removed, updatedFiles) = H.alter (\f -> (isJust f, Nothing)) fileID cachedFiles
         newSize = if removed then cacheSize - fileSize else cacheSize
     in (removed, (updatedFiles, prio, newSize, maxSize))
+
+inCache :: File -> Lru -> Bool
+inCache (filedID, _) (cachedFiles, _, _, _) = filedID `H.member` cachedFiles
