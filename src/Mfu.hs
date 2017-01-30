@@ -18,8 +18,7 @@ type Mfu = (H.HashPSQ FileID FilePrio FileSize, CacheSize, CacheSize)
 instance Cache Mfu where
     to = insert'
     update = updateCache'
-    remove (filedID, fileSize) (cachedFiles, cacheSize, maxCacheSize) =
-        (H.delete filedID cachedFiles, cacheSize - fileSize, maxCacheSize)
+    remove = remove'
     empty maxCacheSize = (H.empty, 0, maxCacheSize)
     size (_, size, _) = size
     maxSize (_, _, maxSize) = maxSize
@@ -46,3 +45,9 @@ removeLFU (cachedFiles, cacheSize, maxCacheSize) =
 delete' :: Maybe (FileID, FilePrio, FileSize) -> (FileSize, Maybe (FileID, FilePrio, FileSize))
 delete' Nothing = (0, Nothing)
 delete' (Just (_, _, size)) = (size, Nothing)
+
+remove' :: File -> Mfu -> Mfu
+remove' (fileID, fileSize) (cachedFiles, cacheSize, maxSize) =
+    let (removed, updatedFiles) = H.alter (\f -> (isJust f, Nothing)) fileID cachedFiles
+        newSize = if removed then cacheSize - fileSize else cacheSize
+    in (updatedFiles, newSize, maxSize)
