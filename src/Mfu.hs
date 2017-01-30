@@ -1,30 +1,26 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Mfu
-    ( Mfu
-    , to
-    , remove
-    , empty
+    ( Mfu(..)
     ) where
-import Prelude hiding (List(..))
-import System.IO
 import qualified Data.HashPSQ as H (HashPSQ(..), insert, empty, alter, alterMin, delete)
 import Request
 import Cache
 import Data.Maybe(isJust)
+import SimpleCaches (readFromCache')
 
 type FilePrio = Int
 type Mfu = (H.HashPSQ FileID FilePrio FileSize, CacheSize, CacheSize)
 
 instance Cache Mfu where
     to = insert'
-    update = updateCache'
+    readFromCache = readFromCache' updateCache
     remove = remove'
     empty maxCacheSize = (H.empty, 0, maxCacheSize)
     size (_, size, _) = size
     maxSize (_, _, maxSize) = maxSize
 
-updateCache' :: File -> Mfu -> (Bool, Mfu)
-updateCache' f@(fileID, fileSize) c@(cachedFiles, cacheSize, maxCacheSize) =
+updateCache :: File -> Mfu -> (Bool, Mfu)
+updateCache f@(fileID, fileSize) c@(cachedFiles, cacheSize, maxCacheSize) =
     let (itemWasInCache, alteredFiles) = H.alter updateItem fileID cachedFiles
     in (itemWasInCache, (alteredFiles, cacheSize, maxCacheSize))
 

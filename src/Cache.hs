@@ -20,7 +20,7 @@ type CacheStatistic = (Int, Int)
 
 class Cache a where
   to :: File -> a -> a
-  update :: File -> a -> (Bool, a)
+  readFromCache :: File -> a -> (Bool, a)
   remove :: File -> a -> a
   empty :: CacheSize -> a
   size :: a -> CacheSize
@@ -32,10 +32,8 @@ getCacheStatistic fileName cache = (`calculateHits` cache) `forEachFileRequestIn
 calculateHits :: Cache a => [FileRequest] -> a -> CacheStatistic
 calculateHits [] _ = (0, 0)
 calculateHits ((Read, fileID, fileSize) : rest) cache =
-  let file = (fileID, fileSize)
-      (itemWasInCache, updatedCache) = file `update` cache
-      newCache = if not itemWasInCache then file `to` cache else updatedCache
-  in boolToCacheStatistic itemWasInCache $ calculateHits rest newCache
+  let (readResult, updatedCache) = readFromCache (fileID, fileSize) cache
+  in boolToCacheStatistic readResult $ calculateHits rest updatedCache
 calculateHits ((Write, fileID, fileSize) : rest) cache =
     let file = (fileID, fileSize)
         updatedCache = file `to` cache

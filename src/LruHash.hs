@@ -1,30 +1,31 @@
 {-# LANGUAGE FlexibleInstances #-}
 module LruHash
-    ( Lru
-    , to
-    , remove
-    , empty
+    ( Lru(..)
+    , removeMaybe
+    , inCache
+    , removeLRU
+    , removeAndRetrieveLRU
+    , updateCache
     ) where
-import Prelude hiding (List(..))
-import System.IO
 import qualified Data.HashPSQ as H (HashPSQ(..), insert, empty, alter, alterMin, delete)
 import Request
 import Cache
 import Data.Maybe(isJust)
+import SimpleCaches (readFromCache')
 
 type FilePrio = Int
 type Lru = (H.HashPSQ FileID FilePrio FileSize, FilePrio, CacheSize, CacheSize)
 
 instance Cache Lru where
     to = insert'
-    update = updateCache'
+    readFromCache = readFromCache' updateCache
     remove file cache = snd $ removeMaybe file cache
     empty maxCacheSize = (H.empty, 0, 0, maxCacheSize)
     size (_, _, size, _) = size
     maxSize (_, _, _, maxSize) = maxSize
 
-updateCache' :: File -> Lru -> (Bool, Lru)
-updateCache' f@(fileID, fileSize) c@(cachedFiles, prio, cacheSize, maxCacheSize) =
+updateCache :: File -> Lru -> (Bool, Lru)
+updateCache f@(fileID, fileSize) c@(cachedFiles, prio, cacheSize, maxCacheSize) =
     let (itemWasInCache, alteredFiles) = H.alter (updateItem prio) fileID cachedFiles
         newPrio = if itemWasInCache then prio + 1 else prio
     in (itemWasInCache, (alteredFiles, newPrio, cacheSize, maxCacheSize))
