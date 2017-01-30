@@ -63,7 +63,7 @@ printStatistic algorithmName logPath emptyCache = do
 
 calculateLru :: String -> CacheSize -> IO ()
 calculateLru logPath cacheSize = do
-    let cache = Lru.empty cacheSize :: Lru.Lru
+    let cache = empty cacheSize :: Lru.Lru
     printStatistic "LFU" logPath cache
 
 calculateMfu :: String -> CacheSize -> IO()

@@ -56,7 +56,7 @@ toAm file cache@(am, ain, aout, maxSize)
 
 free2Q :: Lru2Q -> Lru2Q
 free2Q cache@(am, ain, aout, maxSize)
-    | size ain > maxSize `div` 4 = (am, removeLRU ain, aout, maxSize)
+    | size ain > maxSize `div` 4 = (am, Lru.removeLRU ain, aout, maxSize)
     | otherwise = fromAmToAout cache
 
 fromAmToAout :: Lru2Q -> Lru2Q
