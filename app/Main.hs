@@ -8,12 +8,14 @@ import Cache (Cache, empty, CacheSize, getCacheStatistic)
 import qualified LruHash as Lru
 import qualified Mfu
 import qualified Lru2Q
+import qualified Car
 
 data Opts = Opts
     { calcSize :: !Bool
     , lru :: !Bool
     , mfu :: !Bool
     , lru2Q :: !Bool
+    , car :: !Bool
     , logfile :: !String
     , cacheSize :: !Int
     }
@@ -30,6 +32,7 @@ programOptions =
          <*> switch (long "lru" <> help "Test with a lru cache")
          <*> switch (long "mfu" <> help "Test with a mfu cache")
          <*> switch (long "2q" <> help "Test with a 2q cache")
+         <*> switch (long "car" <> help "Test with a car cache")
          <*> strOption
                 (long "logfile" <> metavar "PATH" <> help "Path to the log file with file requests")
          <*> option auto
@@ -42,6 +45,7 @@ main = do
     when (lru options) $ time $ calculateLru logPath sizeOfCache
     when (mfu options) $ time $ calculateMfu logPath sizeOfCache
     when (lru2Q options) $ time $ calculateLru2Q logPath sizeOfCache
+    when (car options) $ time $ calculateCar logPath sizeOfCache
 
 time :: IO () -> IO ()
 time ioFunc = do
@@ -75,3 +79,8 @@ calculateLru2Q :: String -> CacheSize -> IO()
 calculateLru2Q logPath cacheSize = do
     let cache = empty cacheSize :: Lru2Q.Lru2Q
     printStatistic "2Q" logPath cache
+
+calculateCar :: String -> CacheSize -> IO()
+calculateCar logPath cacheSize = do
+    let cache = empty cacheSize :: Car.Car
+    printStatistic "Car" logPath cache
