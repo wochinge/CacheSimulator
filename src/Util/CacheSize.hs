@@ -1,10 +1,9 @@
-module CacheSize
+module Util.CacheSize
     ( maxCacheSize
     ) where
 
-import System.IO
-import Request
-import Data.Set as S
+import           Data.Set as S hiding (size)
+import           Request
 
 type Storage = (Set FileID, FileSize)
 

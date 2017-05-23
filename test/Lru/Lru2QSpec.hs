@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Lru2QSpec
+module Lru.Lru2QSpec
     (spec)
     where
 
-import Test.Hspec
-import Test.QuickCheck
+import           Test.Hspec
+import           Test.QuickCheck
 
-import Lru2Q
-import Request
-import Cache
+import           Cache
+import           Lru.Lru2Q
+import           Request
 
-initialCache = empty 1000 :: Lru2Q.Lru2Q
+initialCache = empty 1000 AddToCache :: Lru2Q
 
 onlyReadsWhichShouldHit = [ (Read, "1", 500) -- fail
                           , (Read, "2", 500)  -- fail

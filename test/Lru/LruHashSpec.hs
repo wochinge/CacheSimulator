@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module LruHashSpec
+module Lru.LruHashSpec
     (spec)
     where
 
-import Test.Hspec
-import Test.QuickCheck
+import           Test.Hspec
+import           Test.QuickCheck
 
-import LruHash
-import Request
-import Cache
+import           Cache
+import           Lru.LruHash
+import           Request
 
-initialCache = empty 1000 :: Lru
+initialCache = empty 1000 AddToCache :: Lru
 
 testRequests1 = [ (Read, "1", 500) -- fail
                , (Read, "2", 500)  -- fail
@@ -19,7 +19,7 @@ testRequests1 = [ (Read, "1", 500) -- fail
                , (Read, "3", 500)  -- hit
                ]
 
-hitRequests = [ (Read, "1", 500) -- fail
+hitRequests = [ (Read, "1", 500)   -- fail
               , (Read, "1", 500)   -- hit
               , (Read, "1", 500)   -- hit
               , (Read, "1", 500)   -- hit

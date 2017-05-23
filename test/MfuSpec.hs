@@ -4,14 +4,14 @@ module MfuSpec
     (spec)
     where
 
-import Test.Hspec
-import Test.QuickCheck
+import           Test.Hspec
+import           Test.QuickCheck
 
-import Mfu
-import Request
-import Cache
+import           Cache
+import           Mfu
+import           Request
 
-initialCache = empty 1000 :: Mfu
+initialCache = empty 1000 AddToCache :: Mfu
 
 testRequests1 = [ (Read, "1", 500) -- fail
                 , (Read, "2", 500)  -- fail
@@ -50,7 +50,7 @@ allFittingsRequests = [ (Read, "1", 200) -- fail
                       , (Read, "2", 400) -- hit
                       , (Read, "3", 400) -- hit
                       ]
-                      
+
 spec :: Spec
 spec = describe "Testing MFU caching" $ do
     it "Test removing of mfu" $

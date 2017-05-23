@@ -3,23 +3,22 @@
 module Request
     ( getFileRequests
     , forEachFileRequestIn
-    , FileRequest(..)
+    , FileRequest
     , FileID
     , FileSize
     , RequestType(..)
     ) where
 
-import System.IO
-import qualified Data.ByteString.Lazy as B (ByteString(..), hGetContents)
-import qualified Data.ByteString.Lazy.Char8 as B (lines, unpack, split, readInt)
-import Data.List (partition)
+import qualified Data.ByteString.Lazy       as B (ByteString, hGetContents)
+import qualified Data.ByteString.Lazy.Char8 as B (lines, readInt, split)
+import           System.IO
 
 data RequestType = Read | Write | Remove
 type FileRequest = (RequestType, B.ByteString, FileSize)
 type FileID = B.ByteString
 type FileSize = Int
 
-forEachFileRequestIn :: ([FileRequest] -> a) ->  String -> IO a
+forEachFileRequestIn :: ([FileRequest] -> a) -> String -> IO a
 forEachFileRequestIn function fileName =
     withFile fileName ReadMode (\handle -> do
         operations <- getFileRequests handle
@@ -41,8 +40,8 @@ convert line =
 
 textToAccessType :: B.ByteString -> RequestType
 textToAccessType "write" = Write
-textToAccessType "read" = Read
-textToAccessType _ = Remove
+textToAccessType "read"  = Read
+textToAccessType _       = Remove
 
 toInt :: B.ByteString -> FileSize
 toInt asByteString =

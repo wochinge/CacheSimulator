@@ -1,8 +1,8 @@
 module SimpleCaches
-    ( readFromCache'
-    )
-    where
-import Cache
+( readFromCache'
+) where
+
+import           Cache
 
 readFromCache' :: Cache a => (File -> a -> (Bool, a)) -> File -> a -> (Bool, a)
 readFromCache' updateCache file cache =

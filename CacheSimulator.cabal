@@ -15,16 +15,23 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     CacheSize
+  exposed-modules:     Util.CacheSize
                      , Request
+                     , File
                      , Cache
                      , SimpleCaches
-                     , LruHash
+                     , Lru.LruHash
                      , Mfu
-                     , Lru2Q
-                     , Clock
-                     , Car
-                     , Utils.MathUtil
+                     , Fifo
+                     , Lru.Lru2Q
+                     , Clock.Clock
+                     , Clock.Car
+                     , Clock.Car2
+                     , Clock.CartClock
+                     , Clock.Cart
+                     , Clock.ClockCache
+                     , Util.MathUtil
+                     , Util.FileSizeStatistic
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , containers >= 0.5.9.1
@@ -35,7 +42,7 @@ library
 executable CacheSimulator-exe
   hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N8 -O2 -optc-O3
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N8 -optc-O3 -optc-ffast-math -Wall
   build-depends:       base
                      , CacheSimulator
                      , time
@@ -50,13 +57,17 @@ test-suite CacheSimulator-test
                      , hspec
                      , hpc
                      , QuickCheck
+                     , containers >= 0.5.9.1
                      , CacheSimulator
-  other-modules:       LruHashSpec
+  other-modules:       Lru.LruHashSpec
                      , MfuSpec
-                     , Lru2QSpec
-                     , ClockSpec
-                     , CarSpec
-                     , Utils.MathUtilSpec
+                     , FifoSpec
+                     , Lru.Lru2QSpec
+                     , Clock.ClockSpec
+                     , Clock.CarSpec
+                     , Clock.CartSpec
+                     , Util.MathUtilSpec
+                     , Util.FileSizeStatisticSpec
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

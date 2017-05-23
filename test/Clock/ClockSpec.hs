@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ClockSpec
+module Clock.ClockSpec
 ( spec
 ) where
 
 import Test.Hspec
 import Test.QuickCheck
 
-import Clock
+import Clock.Clock
 import Request
 
 testfile = ("1", 100)

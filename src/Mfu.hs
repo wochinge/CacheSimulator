@@ -1,49 +1,55 @@
-{-# LANGUAGE FlexibleInstances #-}
 module Mfu
     ( Mfu(..)
     ) where
-import qualified Data.HashPSQ as H (HashPSQ(..), insert, empty, alter, alterMin, delete)
-import Request
-import Cache
-import Data.Maybe(isJust)
-import SimpleCaches (readFromCache')
+import qualified Cache        as C
+import qualified Data.HashPSQ as H (HashPSQ, alter, alterMin, empty, insert)
+import           Data.Maybe   (isJust)
+import           Request
+import           SimpleCaches (readFromCache')
 
 type FilePrio = Int
-type Mfu = (H.HashPSQ FileID FilePrio FileSize, CacheSize, CacheSize)
+data Mfu = Mfu { files         :: H.HashPSQ FileID FilePrio FileSize
+               , size          :: C.CacheSize
+               , maxSize       :: C.CacheSize
+               , writeStrategy :: C.WriteStrategy
+               }
 
-instance Cache Mfu where
+instance C.Cache Mfu where
     to = insert'
     readFromCache = readFromCache' updateCache
     remove = remove'
-    empty maxCacheSize = (H.empty, 0, maxCacheSize)
-    size (_, size, _) = size
-    maxSize (_, _, maxSize) = maxSize
+    empty = Mfu H.empty 0
+    size = size
+    maxSize = maxSize
+    writeStrategy = writeStrategy
 
-updateCache :: File -> Mfu -> (Bool, Mfu)
-updateCache f@(fileID, fileSize) c@(cachedFiles, cacheSize, maxCacheSize) =
-    let (itemWasInCache, alteredFiles) = H.alter updateItem fileID cachedFiles
-    in (itemWasInCache, (alteredFiles, cacheSize, maxCacheSize))
+updateCache :: C.File -> Mfu -> (Bool, Mfu)
+updateCache (fileID, _) cache =
+    let (itemWasInCache, files') = H.alter updateItem fileID $ files cache
+    in (itemWasInCache, cache {files = files'})
 
 updateItem ::  Maybe (FilePrio, FileSize) -> (Bool, Maybe (FilePrio, FileSize))
-updateItem Nothing = (False, Nothing)
-updateItem (Just (prio, size)) = (True, Just (prio + 1, size))
+updateItem Nothing                 = (False, Nothing)
+updateItem (Just (prio, fileSize)) = (True, Just (prio + 1, fileSize))
 
-insert' :: File -> Mfu -> Mfu
-insert' f@(fileID, fileSize) cache@(cachedFiles, cacheSize, maxCacheSize)
-    | fits f cache = (H.insert fileID 1 fileSize cachedFiles, cacheSize + fileSize, maxCacheSize)
+insert' :: C.File -> Mfu -> Mfu
+insert' f@(fileID, fileSize) cache
+    | C.fits f cache = cache {files = files', size = size cache + fileSize}
     | otherwise = insert' f (removeLFU cache)
+    where files' = H.insert fileID 1 fileSize $ files cache
 
 removeLFU :: Mfu -> Mfu
-removeLFU (cachedFiles, cacheSize, maxCacheSize) =
-    let (sizeOfRemoved, updated) = H.alterMin delete' cachedFiles
-    in (updated, cacheSize - sizeOfRemoved, maxCacheSize)
+removeLFU cache =
+    let (sizeOfRemoved, files') = H.alterMin delete' $ files cache
+    in cache {files = files', size = size cache - sizeOfRemoved}
 
 delete' :: Maybe (FileID, FilePrio, FileSize) -> (FileSize, Maybe (FileID, FilePrio, FileSize))
-delete' Nothing = (0, Nothing)
-delete' (Just (_, _, size)) = (size, Nothing)
+delete' Nothing                 = (0, Nothing)
+delete' (Just (_, _, fileSize)) = (fileSize, Nothing)
 
-remove' :: File -> Mfu -> Mfu
-remove' (fileID, fileSize) (cachedFiles, cacheSize, maxSize) =
-    let (removed, updatedFiles) = H.alter (\f -> (isJust f, Nothing)) fileID cachedFiles
-        newSize = if removed then cacheSize - fileSize else cacheSize
-    in (updatedFiles, newSize, maxSize)
+remove' :: C.File -> Mfu -> Mfu
+remove' (fileID, fileSize) cache =
+    let (removed, updatedFiles) = H.alter (\f -> (isJust f, Nothing)) fileID $ files cache
+        currentSize = size cache
+        newSize = if removed then currentSize - fileSize else currentSize
+    in cache {files = updatedFiles, size = newSize}

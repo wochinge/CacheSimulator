@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Utils.MathUtilSpec
+module Util.MathUtilSpec
 ( spec
 )
 where
@@ -8,7 +8,7 @@ where
 import Test.Hspec
 import Test.QuickCheck
 
-import Utils.MathUtil (toBounds)
+import Util.MathUtil (toBounds)
 
 spec :: Spec
 spec = describe "Test math utils" $ do
