@@ -86,6 +86,7 @@ calculateMaxCacheSize path = do
 
 printStatistic :: Cache a => String -> String -> a -> IO ()
 printStatistic algorithmName logPath emptyCache = do
+    putStrLn $ "Run " ++ algorithmName
     (hits, fails) <- getCacheStatistic logPath emptyCache
     putStrLn $ algorithmName ++ " had " ++ show hits ++ " hits"
     putStrLn $ algorithmName ++ " had " ++ show fails ++ " fails"
