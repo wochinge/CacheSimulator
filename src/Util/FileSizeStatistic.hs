@@ -16,7 +16,7 @@ type FileStatistic = M.Map FileSize Int
 type GatheredFiles = S.Set FileID
 
 fileStatisticPrecision :: Int
-fileStatisticPrecision = 10000
+fileStatisticPrecision = 1000
 
 saveFileStatisticTo :: String -> String -> IO ()
 saveFileStatisticTo logFileName targetName = do
