@@ -91,31 +91,30 @@ printStatistic algorithmName logPath emptyCache = do
     putStrLn $ algorithmName ++ " had " ++ show fails ++ " fails"
 
 calculateLru :: (String, CacheSize, WriteStrategy) -> IO ()
-calculateLru (logPath, sizeOfCache, writeStrategy) = do
-    let cache = empty sizeOfCache writeStrategy :: Lru.Lru
+calculateLru (logPath, sizeOfCache, strategy) = do
+    let cache = empty sizeOfCache strategy :: Lru.Lru
     printStatistic "LRU" logPath cache
-
 calculateMfu :: (String, CacheSize, WriteStrategy) -> IO()
-calculateMfu (logPath, sizeOfCache, writeStrategy) = do
-    let cache = empty sizeOfCache writeStrategy :: Mfu.Mfu
+calculateMfu (logPath, sizeOfCache, strategy) = do
+    let cache = empty sizeOfCache strategy :: Mfu.Mfu
     printStatistic "MFU" logPath cache
 
 calculateLru2Q :: (String, CacheSize, WriteStrategy) -> IO()
-calculateLru2Q (logPath, sizeOfCache, writeStrategy) = do
-    let cache = empty sizeOfCache writeStrategy :: Lru2Q.Lru2Q
+calculateLru2Q (logPath, sizeOfCache, strategy) = do
+    let cache = empty sizeOfCache strategy :: Lru2Q.Lru2Q
     printStatistic "2Q" logPath cache
 
 calculateCar :: (String, CacheSize, WriteStrategy) -> IO()
-calculateCar (logPath, sizeOfCache, writeStrategy) = do
-    let cache = empty sizeOfCache writeStrategy :: Car.Car
+calculateCar (logPath, sizeOfCache, strategy) = do
+    let cache = empty sizeOfCache strategy :: Car.Car
     printStatistic "Car" logPath cache
 
 calculateCart :: (String, CacheSize, WriteStrategy) -> IO()
-calculateCart (logPath, sizeOfCache, writeStrategy) = do
-    let cache = empty sizeOfCache writeStrategy :: Cart.Cart
+calculateCart (logPath, sizeOfCache, strategy) = do
+    let cache = empty sizeOfCache strategy :: Cart.Cart
     printStatistic "Cart" logPath cache
 
 calculateFifo :: (String, CacheSize, WriteStrategy) -> IO()
-calculateFifo (logPath, sizeOfCache, writeStrategy) = do
-    let cache = empty sizeOfCache writeStrategy :: Fifo
+calculateFifo (logPath, sizeOfCache, strategy) = do
+    let cache = empty sizeOfCache strategy :: Fifo
     printStatistic "Fifo" logPath cache
