@@ -55,6 +55,13 @@ programOptions =
 main :: IO ()
 main = do
     options@Opts {logfile=logPath, cacheSize=sizeOfCache, writeAddsToCache=writeAdds} <- execParser optsParser
+
+    putStrLn $ "Simulation with log "
+        ++ logPath
+        ++ ", size of " ++ show (cacheSize options)
+        ++ " bytes and writeAddsToCache = " ++ show (writeAddsToCache options)
+        ++ "\n\n"
+
     let args = (logPath, sizeOfCache, if writeAdds then AddToCache else Invalidate)
     when (calcSize options) $ time $ calculateMaxCacheSize logPath
     when (lru options) $ time $ calculateLru args
