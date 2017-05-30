@@ -5,11 +5,10 @@ where
 import           Data.Maybe       (fromJust, isJust, isNothing)
 
 import           Cache            (CacheSize, File, WriteStrategy, size)
-import qualified Cache            as C (Cache (..), to)
+import qualified Cache            as C (Cache (..), fits, to)
 import qualified Clock.CartClock  as CC
 import           Clock.ClockCache
 import qualified Lru.LruHash      as Lru
-import           Util.MathUtil    (multipliedBy)
 
 data Cart = Cart { t1            :: CC.CartClock
                  , b1            :: Lru.Lru
@@ -49,33 +48,44 @@ instance ClockCache Cart where
     sizeOfT2 = CC.size . t2
 
 readFromCache :: File -> Cart -> (Bool, Cart)
-readFromCache file cache =
-    let (inT1, updatedT1) = file `CC.inCache` t1 cache
-        (inT2, updatedT2) = if not inT1 then file `CC.inCache` t2 cache else (False, t2 cache)
-    in if inT1 || inT2
-        then (True, cache {t1 = updatedT1, t2 = updatedT2})
-        else (False, file `to` cache)
+readFromCache file cache
+    | inT1 = (True, cache { t1 = t1' })
+    | inT2 = (True, cache { t2 = t2' })
+    | otherwise = (False, file `to` cache)
+    where (inT1, t1') = file `CC.inCache` t1 cache
+          (inT2, t2') = file `CC.inCache` t2 cache
 
 to :: File -> Cart -> Cart
 to file cache
-    | not inGhostCache = file `asShortTermToT1` preparedCache
-    | inB1 = fromB1ToT1 file . incP $ preparedCache
-    | otherwise = incQ . fromB2ToT1 file . decP $ preparedCache
-    where
-        inB1 = file `Lru.inCache` b1 cache
-        inB2 = file `Lru.inCache` b2 cache
-        inGhostCache = inB1 || inB2
-        preparedCache = replaceGhostCaches inGhostCache $ replace file cache
+    | file `C.fits` cache = actuallyInsert inB1OrB2 file cache
+    | otherwise = file `to` free file (inB1 || inB2) cache
+    where inB1OrB2@(inB1, inB2) = inGhostCache file cache
+
+inGhostCache :: File -> Cart -> (Bool, Bool)
+inGhostCache file cache
+    | isIn $ b1 cache = (True, False)
+    | isIn $ b2 cache = (False, True)
+    | otherwise = (False, False)
+    where isIn ghostList = file `Lru.inCache` ghostList
+
+actuallyInsert :: (Bool, Bool) -> File -> Cart -> Cart
+actuallyInsert (inB1, inB2) file cache
+    | not (inB1 || inB2) = file `asShortTermToT1` cache
+    | inB1 = fromB1ToT1 file . incP $ cache
+    | otherwise = incQ . fromB2ToT1 file . decP $ cache
+
+free :: File -> Bool -> Cart -> Cart
+free file isInGhostCache cache = replaceGhostCaches isInGhostCache $ replace file cache
 
 asShortTermToT1 :: File -> Cart -> Cart
-asShortTermToT1 file cache = cache { t1 = file `CC.asShortTermTo` t1 cache
-                                   , sizeShortTerm = newShortTermSize file cache
-                                   }
+asShortTermToT1 file@(_, fileSize) cache = cache { t1 = file `CC.asShortTermTo` t1 cache
+                                                 , sizeShortTerm = fileSize + sizeShortTerm cache
+                                                 }
 
 asLongTermToT1 :: File -> Cart -> Cart
-asLongTermToT1 file cache = cache { t1 = file `CC.asLongTermTo` t1 cache
-                                  , sizeShortTerm = newLongTermSize file cache
-                                  }
+asLongTermToT1 file@(_, fileSize) cache = cache { t1 = file `CC.asLongTermTo` t1 cache
+                                                , sizeLongTerm = fileSize + sizeLongTerm cache
+                                                }
 
 fromB1ToT1 :: File -> Cart -> Cart
 fromB1ToT1 file cache =
@@ -87,50 +97,40 @@ fromB2ToT1 file cache =
     let cache' = file `asLongTermToT1` cache
     in cache' {b2 = file `C.remove` b2 cache'}
 
-
-newShortTermSize :: File -> Cart -> CacheSize
-newShortTermSize (_, fileSize) cache =
-    let currentShortTermSize = sizeShortTerm cache
-    in currentShortTermSize + fileSize
-
-newLongTermSize :: File -> Cart -> CacheSize
-newLongTermSize (_, fileSize) cache =
-    let currentLongTermSize = sizeLongTerm cache
-    in currentLongTermSize + fileSize
-
 replace :: File -> Cart -> Cart
-replace file cache
-    | not $ cache `toSmallFor` file = cache -- ok
-    | otherwise = replace file cache'''
-    where
-        (t2', t1') = CC.pushToOtherWhileReferenced (t2 cache) (t1 cache)
-        cache' = incQ cache {t1 = t1', t2 = t2'}
+replace file cache =
+    let cache' = pushToOtherWhileReferenced cache
         cache'' = prepareT1 cache'
-        cache''' = cache'' `freeFor` file
+    in cache'' `freeFor` file
+
+pushToOtherWhileReferenced :: Cart -> Cart
+pushToOtherWhileReferenced cache =
+    let (continue, t2', t1') = CC.pushToOtherWhileReferenced (t2 cache) (t1 cache)
+    in if continue
+        then pushToOtherWhileReferenced $ incQ cache { t1 = t1', t2 = t2' }
+        else cache
 
 freeFor:: Cart -> File -> Cart
 freeFor cache file@(_, fileSize)
-    | not cacheTooSmall = cache
+    | file `C.fits` cache = cache
     | sizeT1 + fileSize > pInBytes cache = fromT1ToB1 cache
     | otherwise = fromT2ToB2 cache
-    where cacheTooSmall = cache `toSmallFor` file
-          sizeT1 = CC.size . t1 $ cache
+    where sizeT1 = sizeOfT1 cache
 
 incQ :: Cart -> Cart
 incQ cache =
-    let sizeT1 = CC.size . t1 $ cache
-        sizeT2 = CC.size . t2 $ cache
+    let sizeT1 = sizeOfT1 cache
         sizeB2 = size . b2 $ cache
         sizeShortTermFiles = sizeShortTerm cache
         c = maxSize cache
         currentQ = q cache
-    in if sizeT2 + sizeB2 + sizeT1 - sizeShortTermFiles >= c
+    in if size cache + sizeB2 - sizeShortTermFiles >= c
         then cache {q = min (currentQ + pseudoPageSizeInBytes cache) (2 * c - sizeT1)}
         else cache
 
 decQ :: Cart -> Cart
 decQ cache =
-    let sizeT1 = CC.size . t1 $ cache
+    let sizeT1 = sizeOfT1 cache
         c = maxSize cache
         currentQ = q cache
     in cache {q = max (currentQ - pseudoPageSizeInBytes cache) (c - sizeT1)}
@@ -140,7 +140,7 @@ prepareT1 cache =
     let (fileToMove, t1') = CC.getLongTermOrReferencedHead $ t1 cache
         Just (fileId, (referenceBit, filterBit, fileSize)) = fileToMove
         sizeB1 = size . b1 $ cache
-        fileShouldBeLongterm = sizeOfT1 cache >= min sizeB1 ((p cache + pseudoPageSize) `multipliedBy` maxSize cache) && filterBit == CC.ShortTerm
+        fileShouldBeLongterm = sizeOfT1 cache >= min sizeB1 (pInBytes cache + pseudoPageSizeInBytes cache) && filterBit == CC.ShortTerm
         sizeShortTermFiles = sizeShortTerm cache
         sizeLongTermFiles = sizeLongTerm cache
         file = (fileId, fileSize)
@@ -151,10 +151,9 @@ prepareT1 cache =
                 if fileShouldBeLongterm then
                     prepareT1 cache {t1 = file `CC.asLongTermTo` t1', sizeShortTerm = sizeShortTermFiles - fileSize, sizeLongTerm = sizeLongTermFiles + fileSize}
                 else
-                    prepareT1 cache {t1 = CC.to file filterBit t1'}
+                    prepareT1 cache {t1 = file `CC.asShortTermTo` t1'}
             else
                 prepareT1 . decQ $ cache {t1 = t1', t2 = file `CC.asLongTermTo` t2 cache}
-
 
 replaceGhostCaches :: Bool -> Cart -> Cart
 replaceGhostCaches True cache = cache
@@ -165,20 +164,17 @@ replaceGhostCaches _ cache
     where
         sizeB1 = C.size . b1 $ cache
         sizeB2 = C.size . b2 $ cache
-        ghostListSize = sizeB1 + sizeB2
-        ghostListTooBig = ghostListSize > maxSize cache
+        ghostListTooBig = sizeB1 + sizeB2 > maxSize cache
 
 fromT1ToB1 :: Cart -> Cart
 fromT1ToB1 cache =
-    let t1Clock = t1 cache
-        (removedFile@(_, fileSize), t1') = CC.tick t1Clock
+    let (removedFile@(_, fileSize), t1') = CC.removeMin $ t1 cache
         b1' = removedFile `C.to` b1 cache
     in cache {t1 = t1', b1 = b1', sizeShortTerm = sizeShortTerm cache - fileSize}
 
 fromT2ToB2 :: Cart -> Cart
 fromT2ToB2 cache =
-    let t2Clock = t2 cache
-        (removedFile@(_, fileSize), t2') = CC.tick t2Clock
+    let (removedFile@(_, fileSize), t2') = CC.removeMin $ t2 cache
         b2' = removedFile `C.to` b2 cache
     in cache {t2 = t2', b2 = b2', sizeLongTerm = sizeLongTerm cache - fileSize}
 

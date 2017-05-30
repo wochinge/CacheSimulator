@@ -3,7 +3,7 @@ module Clock.Car
 where
 
 import           Cache            (CacheSize, File, WriteStrategy)
-import qualified Cache            as C (Cache (..), size, to)
+import qualified Cache            as C (Cache (..), fits, size, to)
 import qualified Clock.Clock      as Clock
 import           Clock.ClockCache
 import qualified Lru.LruHash      as Lru
@@ -70,7 +70,7 @@ fromB2toT2 file cache =
 
 replace :: File -> Car -> Car
 replace file@(_, fileSize) cache
-    | not $ cache `toSmallFor` file = cache
+    | file `C.fits` cache = cache
     | sizeT1 > 0 && fromIntegral (sizeT1 + fileSize) >= pInBytes cache = replace file $ fromT1ToB1 cache
     | otherwise = replace file $ fromT2ToB2 cache
     where

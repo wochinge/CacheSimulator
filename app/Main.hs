@@ -60,7 +60,7 @@ main = do
         ++ logPath
         ++ ", size of " ++ show (cacheSize options)
         ++ " bytes and writeAddsToCache = " ++ show (writeAddsToCache options)
-        ++ "\n\n"
+        ++ "\n"
 
     let args = (logPath, sizeOfCache, if writeAdds then AddToCache else Invalidate)
     when (calcSize options) $ time $ calculateMaxCacheSize logPath

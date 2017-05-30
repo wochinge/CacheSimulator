@@ -6,7 +6,6 @@ module Clock.ClockCache
 , pInBytes
 , updateP
 , updateP'
-, toSmallFor
 , PageReferenceBit (..)
 ) where
 
@@ -53,9 +52,3 @@ updateP' minusOrPlus numeratorSize denominatorSize cache =
                 then oldP - 1
                 else fromIntegral . round $ max 0.0 (oldP `minusOrPlus` delta)
     in setP p' cache
-
-toSmallFor :: ClockCache a => a -> File -> Bool
-toSmallFor cache (_, fileSize) =
-    let sizeT1 = sizeOfT1 cache
-        sizeT2 = sizeOfT2 cache
-    in sizeT1 + sizeT2 + fileSize > maxSize cache

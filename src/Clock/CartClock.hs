@@ -3,7 +3,7 @@ module Clock.CartClock
 , empty
 , inCache
 , to
-, tick
+, removeMin
 , asShortTermTo
 , asLongTermTo
 , removeAndGetFilterBit
@@ -42,8 +42,8 @@ updatePageReference :: Maybe (FilePrio, ClockFile) -> (Bool, Maybe (FilePrio, Cl
 updatePageReference Nothing = (False, Nothing)
 updatePageReference (Just (filePrio, (_, filterBit, fileSize))) = (True, Just (filePrio, (Referenced, filterBit, fileSize)))
 
-tick :: CartClock -> (File, CartClock)
-tick clock =
+removeMin :: CartClock -> (File, CartClock)
+removeMin clock =
     let cached = files clock
         currentSize = size clock
         removeResult = H.minView cached
@@ -51,19 +51,19 @@ tick clock =
         Just (fileId, _, (_, _, fileSize), files') -> ((fileId, fileSize), clock {files = files', size = currentSize - fileSize})
         _ -> error "Should not happen"
 
-pushToOtherWhileReferenced :: CartClock -> CartClock -> (CartClock, CartClock)
-pushToOtherWhileReferenced self other =
-    let (removed, clockFiles) = H.alterMin deleteAndGetIfReference $ files self
+pushToOtherWhileReferenced :: CartClock -> CartClock -> (Bool, CartClock, CartClock)
+pushToOtherWhileReferenced source destination =
+    let (removed, sourceFiles') = H.alterMin deleteAndGetIfReference $ files source
         (fileID, (_, filterBit, fileSizeRemoved)) = fromJust removed
-        other' = to (fileID, fileSizeRemoved) filterBit other
+        destination' = to (fileID, fileSizeRemoved) filterBit destination
     in case removed of
-        Nothing -> (self, other)
-        Just _ -> pushToOtherWhileReferenced self {files = clockFiles, size = size self - fileSizeRemoved} other'
+        Nothing -> (False, source, destination)
+        Just _ -> (True, source {files = sourceFiles', size = size source - fileSizeRemoved}, destination')
 
 deleteAndGetIfReference :: Maybe (FileID, FilePrio, ClockFile) -> (Maybe ClockFileId, Maybe (FileID, FilePrio, ClockFile))
 deleteAndGetIfReference Nothing = (Nothing, Nothing)
 deleteAndGetIfReference file@(Just (_, _, (NotReferenced, _, _))) = (Nothing, file)
-deleteAndGetIfReference (Just (fileId, _, (_, filterBit, fileSize))) = (Just (fileId, (NotReferenced, filterBit, fileSize)), Nothing)
+deleteAndGetIfReference (Just (fileId, _, value)) = (Just (fileId, value), Nothing)
 
 getLongTermOrReferencedHead :: CartClock -> (Maybe ClockFileId, CartClock)
 getLongTermOrReferencedHead clock =
@@ -74,8 +74,8 @@ getLongTermOrReferencedHead clock =
 
 deleteAndRetrieveLongTermOrReferenced :: Maybe (FileID, FilePrio, ClockFile) -> (Maybe (FileID, ClockFile), Maybe (FileID, FilePrio, ClockFile))
 deleteAndRetrieveLongTermOrReferenced Nothing = (Nothing, Nothing)
-deleteAndRetrieveLongTermOrReferenced file@(Just (fileId, _, (referenced, filterBit, fileSize)))
-    | referenced == Referenced || filterBit == LongTerm = (Just (fileId, (NotReferenced, filterBit, fileSize)), Nothing)
+deleteAndRetrieveLongTermOrReferenced file@(Just (fileId, _, value@(referenced, filterBit, _)))
+    | referenced == Referenced || filterBit == LongTerm = (Just (fileId, value), Nothing)
     | otherwise = (Nothing, file)
 
 removeAndGetFilterBit :: File -> CartClock -> (Maybe FilterBit, CartClock)
