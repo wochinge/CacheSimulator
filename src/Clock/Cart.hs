@@ -50,7 +50,6 @@ instance ClockCache Cart where
 
 readFromCache :: File -> Cart -> (Bool, Cart)
 readFromCache file cache
-    | file `biggerAsMax` cache = (False, cache)
     | inT1 = (True, cache { t1 = t1' })
     | inT2 = (True, cache { t2 = t2' })
     | otherwise = (False, file `to` cache)
@@ -59,6 +58,7 @@ readFromCache file cache
 
 to :: File -> Cart -> Cart
 to file cache
+    | file `biggerAsMax` cache = cache
     | file `C.fits` cache = actuallyInsert inB1OrB2 file cache
     | otherwise = file `to` free file (inB1 || inB2) cache
     where inB1OrB2@(inB1, inB2) = inGhostCache file cache

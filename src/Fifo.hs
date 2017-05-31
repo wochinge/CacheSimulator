@@ -32,6 +32,7 @@ readFromCache f@(fileId, _) cache
 
 to :: C.File -> Fifo -> Fifo
 to f@(fileId, fileSize) cache
+    | f `C.biggerAsMax` cache = cache
     | C.fits f cache = cache {files = files', prio = currentPrio + 1, size = size cache + fileSize}
     | otherwise = to f $ removeFirst cache
     where files' = H.insert fileId currentPrio fileSize $ files cache

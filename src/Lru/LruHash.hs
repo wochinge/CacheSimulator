@@ -44,6 +44,7 @@ updateItem newPrio (Just (_, fileSize)) = (True, Just (newPrio, fileSize))
 
 to' :: C.File -> Lru -> Lru
 to' f@(fileID, fileSize) cache
+    | f `C.biggerAsMax` cache = cache
     | C.fits f cache = cache {files = files', nextPrio = prio + 1, size = currentCacheSize + fileSize}
     | otherwise = to' f (removeLRU cache)
     where prio = nextPrio cache

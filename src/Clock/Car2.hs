@@ -2,7 +2,7 @@ module Clock.Car2
 
 where
 
-import           Cache            (CacheSize, File, WriteStrategy)
+import           Cache            (CacheSize, File, WriteStrategy, biggerAsMax)
 import qualified Cache            as C (Cache (..), fits, remove, size, to)
 import qualified Clock.Clock      as Clock
 import           Clock.ClockCache
@@ -40,15 +40,16 @@ instance ClockCache Car where
  sizeOfT2 = Clock.size . t2
 
 readFromCache :: File -> Car -> (Bool, Car)
-readFromCache file cache =
-    let (inT1, updatedT1) = file `Clock.inCache` t1 cache
-        (inT2, updatedT2) = if not inT1 then file `Clock.inCache` t2 cache else (False, t2 cache)
-    in if inT1 || inT2
-        then (True, cache {t1 = updatedT1, t2 = updatedT2})
-        else (False, file `to` cache)
+readFromCache file cache
+    | inT1 = (True, cache { t1 = t1' })
+    | inT2 = (True, cache { t2 = t2' })
+    | otherwise = (False, file `to` cache)
+    where  (inT1, t1') = file `Clock.inCache` t1 cache
+           (inT2, t2') = file `Clock.inCache` t2 cache
 
 to :: File -> Car -> Car
 to file cache
+    | file `biggerAsMax` cache = cache
     | not inGhostCache = preparedCache {t1 = file `Clock.to` t1 preparedCache}
     | inB1 = fromB1toT2 file . incP $ preparedCache
     | otherwise = fromB2toT2 file . decP $ preparedCache
