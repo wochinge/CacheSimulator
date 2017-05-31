@@ -8,10 +8,12 @@ import           Control.Monad          (when)
 import           Data.Semigroup         ((<>))
 import           Data.Time
 import           Fifo
+import qualified IdealCache             as Ideal
 import qualified Lru.Lru2Q              as Lru2Q
 import qualified Lru.LruHash            as Lru
 import qualified Mfu
 import           Options.Applicative    hiding (empty)
+import           Request                (forEachFileRequestIn)
 import           Util.CacheSize         (maxCacheSize)
 import           Util.FileSizeStatistic (saveFileStatisticTo)
 
@@ -23,6 +25,7 @@ data Opts = Opts
     , car              :: !Bool
     , cart             :: !Bool
     , fifo             :: !Bool
+    , ideal            :: !Bool
     , logfile          :: !String
     , cacheSize        :: !Int
     , fileStatistic    :: !Bool
@@ -46,6 +49,7 @@ programOptions =
          <*> switch (long "car" <> help "Test with a car cache")
          <*> switch (long "cart" <> help "Test with a cart cache")
          <*> switch (long "fifo" <> help "Test with a fifo cache")
+         <*> switch (long "ideal" <> help "Test with a ideal cache")
          <*> strOption
                 (long "logfile" <> metavar "PATH" <> help "Path to the log file with file requests")
          <*> option auto
@@ -71,6 +75,7 @@ main = do
     when (car options) $ time $ calculateCar args
     when (cart options) $ time $ calculateCart args
     when (fifo options) $ time $ calculateFifo args
+    when (ideal options) $ time $ calculateIdeal args
     when (fileStatistic options) $ time $ saveFileStatisticTo logPath (logPath ++ ".fileStat")
 
 time :: IO () -> IO ()
@@ -120,3 +125,9 @@ calculateFifo :: (String, CacheSize, WriteStrategy) -> IO()
 calculateFifo (logPath, sizeOfCache, strategy) = do
     let cache = empty sizeOfCache strategy :: Fifo
     printStatistic "Fifo" logPath cache
+
+calculateIdeal :: (String, CacheSize, WriteStrategy) -> IO()
+calculateIdeal (logPath, sizeOfCache, strategy) = do
+    let cache = empty sizeOfCache strategy :: Ideal.IdealCache
+    cache' <- (\r -> Ideal.initFuture r 100000000 cache) `forEachFileRequestIn` logPath
+    printStatistic "Ideal" logPath cache'
