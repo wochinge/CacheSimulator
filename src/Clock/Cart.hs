@@ -4,7 +4,8 @@ where
 
 import           Data.Maybe       (fromJust, isJust, isNothing)
 
-import           Cache            (CacheSize, File, WriteStrategy, size)
+import           Cache            (CacheSize, File, WriteStrategy, biggerAsMax,
+                                   size)
 import qualified Cache            as C (Cache (..), fits, to)
 import qualified Clock.CartClock  as CC
 import           Clock.ClockCache
@@ -49,6 +50,7 @@ instance ClockCache Cart where
 
 readFromCache :: File -> Cart -> (Bool, Cart)
 readFromCache file cache
+    | file `biggerAsMax` cache = (False, cache)
     | inT1 = (True, cache { t1 = t1' })
     | inT2 = (True, cache { t2 = t2' })
     | otherwise = (False, file `to` cache)

@@ -7,6 +7,7 @@ module Cache
     , Cache (..)
     , fits
     , WriteStrategy (..)
+    , biggerAsMax
     )
     where
 
@@ -62,3 +63,6 @@ fits (_, fileSize) cache =
         maxCacheSize = maxSize cache
         futureSize = fileSize + cacheSize
     in futureSize <= maxCacheSize
+
+biggerAsMax :: Cache a => File -> a -> Bool
+biggerAsMax (_, fileSize) cache = fileSize > maxSize cache
