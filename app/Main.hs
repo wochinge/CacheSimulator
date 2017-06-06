@@ -1,7 +1,8 @@
 module Main where
 
-import           Cache                  (Cache, CacheSize, WriteStrategy (..),
-                                         empty, getCacheStatistic)
+import           Cache                  (Cache, CacheSize, CacheStatistic,
+                                         WriteStrategy (..), empty,
+                                         getCacheStatistic)
 import qualified Clock.Car              as Car
 import qualified Clock.Cart             as Cart
 import           Control.Monad          (when)
@@ -13,7 +14,6 @@ import qualified Lru.Lru2Q              as Lru2Q
 import qualified Lru.LruHash            as Lru
 import qualified Mfu
 import           Options.Applicative    hiding (empty)
-import           Request                (forEachFileRequestIn)
 import           Util.CacheSize         (maxCacheSize)
 import           Util.FileSizeStatistic (saveFileStatisticTo)
 
@@ -90,44 +90,49 @@ calculateMaxCacheSize path = do
     cacheSizeInBytes <- maxCacheSize path
     putStrLn $ "The minimal needed size to hold the data is: " ++ show cacheSizeInBytes
 
-printStatistic :: Cache a => String -> String -> a -> IO ()
-printStatistic algorithmName logPath emptyCache = do
+simulate :: Cache a => String -> String -> a -> IO ()
+simulate algorithmName logPath emptyCache = do
     putStrLn $ "Run " ++ algorithmName
-    (hits, fails) <- getCacheStatistic logPath emptyCache
+    stat <- getCacheStatistic logPath emptyCache
+    printStatistic algorithmName stat
+
+printStatistic :: String -> CacheStatistic -> IO ()
+printStatistic algorithmName (hits, fails) = do
     putStrLn $ algorithmName ++ " had " ++ show hits ++ " hits"
     putStrLn $ algorithmName ++ " had " ++ show fails ++ " fails"
 
 calculateLru :: (String, CacheSize, WriteStrategy) -> IO ()
 calculateLru (logPath, sizeOfCache, strategy) = do
     let cache = empty sizeOfCache strategy :: Lru.Lru
-    printStatistic "LRU" logPath cache
+    simulate "LRU" logPath cache
 calculateMfu :: (String, CacheSize, WriteStrategy) -> IO()
 calculateMfu (logPath, sizeOfCache, strategy) = do
     let cache = empty sizeOfCache strategy :: Mfu.Mfu
-    printStatistic "MFU" logPath cache
+    simulate "MFU" logPath cache
 
 calculateLru2Q :: (String, CacheSize, WriteStrategy) -> IO()
 calculateLru2Q (logPath, sizeOfCache, strategy) = do
     let cache = empty sizeOfCache strategy :: Lru2Q.Lru2Q
-    printStatistic "2Q" logPath cache
+    simulate "2Q" logPath cache
 
 calculateCar :: (String, CacheSize, WriteStrategy) -> IO()
 calculateCar (logPath, sizeOfCache, strategy) = do
     let cache = empty sizeOfCache strategy :: Car.Car
-    printStatistic "Car" logPath cache
+    simulate "Car" logPath cache
 
 calculateCart :: (String, CacheSize, WriteStrategy) -> IO()
 calculateCart (logPath, sizeOfCache, strategy) = do
     let cache = empty sizeOfCache strategy :: Cart.Cart
-    printStatistic "Cart" logPath cache
+    simulate "Cart" logPath cache
 
 calculateFifo :: (String, CacheSize, WriteStrategy) -> IO()
 calculateFifo (logPath, sizeOfCache, strategy) = do
     let cache = empty sizeOfCache strategy :: Fifo
-    printStatistic "Fifo" logPath cache
+    simulate "Fifo" logPath cache
 
 calculateIdeal :: (String, CacheSize, WriteStrategy) -> IO()
 calculateIdeal (logPath, sizeOfCache, strategy) = do
+    putStrLn $ "Run " ++ "Ideal"
     let cache = empty sizeOfCache strategy :: Ideal.IdealCache
-    cache' <- (\r -> Ideal.initFuture r 100000000 cache) `forEachFileRequestIn` logPath
-    printStatistic "Ideal" logPath cache'
+    stat <- Ideal.getIdealCacheStatistic cache logPath
+    printStatistic "Ideal" stat

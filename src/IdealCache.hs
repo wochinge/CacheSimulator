@@ -1,18 +1,17 @@
 
 module IdealCache
 ( IdealCache (..)
-, initFuture
+, getIdealCacheStatistic
 ) where
 
-import qualified Cache           as C
-import qualified Data.HashPSQ    as H (HashPSQ, alter, delete, empty, insert,
-                                       insert, lookup, minView)
-import qualified Data.Map.Strict as M
-import           Data.Maybe      (fromJust, isJust)
-import           Data.Sequence   (ViewL (..), ViewR (..))
-import qualified Data.Sequence   as S
-import           Request         (FileID, FileRequest, FileSize,
-                                  RequestType (..))
+import qualified Cache         as C
+import qualified Data.HashPSQ  as H (HashPSQ, alter, delete, empty, insert,
+                                     insert, lookup, member, minView)
+import           Data.Maybe    (fromJust, isJust)
+import           Data.Sequence (ViewL (..), ViewR (..))
+import qualified Data.Sequence as S
+import           Request       (FileID, FileRequest, FileSize, RequestType (..),
+                                forEachFileRequestIn)
 
 type FilePrio = Int
 data Version = Same | Changed deriving Eq
@@ -20,11 +19,10 @@ data Empty = Empty
 
 type OtherRequest = (Version, Maybe FilePrio)
 
-data IdealCache = IdealCache { files :: M.Map FileID FileSize
+data IdealCache = IdealCache { futureCached :: H.HashPSQ FileID FilePrio FileSize
                              , size :: C.CacheSize
                              , maxSize :: C.CacheSize
                              , future :: H.HashPSQ FileID FilePrio (S.Seq OtherRequest)
-                             , futureCached :: H.HashPSQ FileID FilePrio FileSize
                              , writeStrategy :: C.WriteStrategy
                              }
 
@@ -35,19 +33,23 @@ instance C.Cache IdealCache where
     readFromCache = readFromCache
     remove = remove
     to = to
-    empty maxCacheSize = IdealCache M.empty 0 maxCacheSize H.empty H.empty
+    empty maxCacheSize = IdealCache H.empty 0 maxCacheSize H.empty
+
+getIdealCacheStatistic :: IdealCache -> String -> IO C.CacheStatistic
+getIdealCacheStatistic cache logFileName =
+    let f rs = C.calculateHits rs ((0, 0), initFuture rs 100000000 cache)
+    in f `forEachFileRequestIn` logFileName
 
 readFromCache :: C.File -> IdealCache -> (Bool, IdealCache)
 readFromCache f@(fileId, _) cache
     | inCache = (True, updateFuture f cache)
     | otherwise = (False, f `to` cache)
-    where inCache = M.member fileId $ files cache
+    where inCache = H.member fileId $ futureCached cache
 
 remove :: C.File -> IdealCache -> IdealCache
 remove (fileId, fileSize) cache =
     let (_, future') = H.alter switchToNewFileVersion fileId $ future cache
-    in cache { files = M.delete fileId $ files cache
-             , futureCached =  H.delete fileId $ futureCached cache
+    in cache { futureCached =  H.delete fileId $ futureCached cache
              , size = size cache - fileSize
              , future = future'
              }
@@ -55,8 +57,7 @@ remove (fileId, fileSize) cache =
 to :: C.File -> IdealCache -> IdealCache
 to file@(fileId, fileSize) cache
     | file `C.biggerAsMax` cache = cache
-    | file `C.fits` cache = cache { files = M.insert fileId fileSize $ files cache
-                                  , size = size cache + fileSize
+    | file `C.fits` cache = cache { size = size cache + fileSize
                                   , futureCached = H.insert fileId (getPrio file cache) fileSize $ futureCached cache
                                   }
     | otherwise = file `to` free cache
@@ -64,9 +65,7 @@ to file@(fileId, fileSize) cache
 free :: IdealCache -> IdealCache
 free cache =
     let Just (fileId, _, fileSize, futureCached') = H.minView $ futureCached cache
-        files' = M.delete fileId $ files cache
-    in cache { files = files'
-             , futureCached = futureCached'
+    in cache { futureCached = futureCached'
              , size = size cache - fileSize
              }
 

@@ -1,3 +1,4 @@
+
 module Cache
     ( File
     , CacheSize
@@ -31,23 +32,23 @@ class Cache a where
   writeStrategy :: a -> WriteStrategy
 
 getCacheStatistic :: Cache a => String -> a -> IO CacheStatistic
-getCacheStatistic fileName cache = (`calculateHits` cache) `forEachFileRequestIn` fileName
+getCacheStatistic fileName cache = (`calculateHits` ((0, 0), cache)) `forEachFileRequestIn` fileName
 --getCacheStatistic fileName cache = (fst . foldl' calculateHits' ((0, 0), cache)) `forEachFileRequestIn` fileName
 
-calculateHits :: Cache a => [FileRequest] -> a -> CacheStatistic
-calculateHits [] _ = (0, 0)
-calculateHits ((Read, fileID, fileSize) : rest) cache =
+calculateHits :: Cache a => [FileRequest] -> (CacheStatistic, a) -> CacheStatistic
+calculateHits [] (stats, _) = stats
+calculateHits ((Read, fileID, fileSize) : rest) (stats, cache) =
   let (readResult, updatedCache) = readFromCache (fileID, fileSize) cache
-  in boolToCacheStatistic readResult $ calculateHits rest updatedCache
-calculateHits ((Write, fileID, fileSize) : rest) cache
-  | writeStrategy cache == Invalidate = calculateHits rest cacheWithoutFile
-  | otherwise = calculateHits rest $ file `to` cacheWithoutFile
+  in calculateHits rest (boolToCacheStatistic readResult stats, updatedCache)
+calculateHits ((Write, fileID, fileSize) : rest) (stats, cache)
+  | writeStrategy cache == Invalidate = calculateHits rest (stats, cacheWithoutFile)
+  | otherwise = calculateHits rest (stats, file `to` cacheWithoutFile)
     where file = (fileID, fileSize)
           cacheWithoutFile = remove file cache -- invalidate possible old version before adding it to the cache
-calculateHits ((Remove, fileID, fileSize) : rest) cache =
+calculateHits ((Remove, fileID, fileSize) : rest) (stats, cache) =
   let file = (fileID, fileSize)
       updatedCache = remove file cache
-  in calculateHits rest updatedCache
+  in calculateHits rest (stats, updatedCache)
 
 calculateHits' :: Cache a => (CacheStatistic, a) -> FileRequest -> (CacheStatistic, a)
 calculateHits' (stats, cache) (Read, fileID, fileSize) =
