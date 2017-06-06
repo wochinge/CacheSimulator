@@ -9,8 +9,8 @@ module Request
     , RequestType(..)
     ) where
 
-import qualified Data.ByteString.Lazy       as B (ByteString, hGetContents)
-import qualified Data.ByteString.Lazy.Char8 as B (lines, readInt, split)
+import qualified Data.ByteString            as B (ByteString, hGetContents)
+import qualified Data.ByteString.Char8 as B (lines, readInt, split)
 import           System.IO
 
 data RequestType = Read | Write | Remove

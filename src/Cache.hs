@@ -11,7 +11,8 @@ module Cache
     )
     where
 
-import           Prelude hiding (fail)
+import           Data.List (foldl')
+import           Prelude   hiding (fail)
 import           Request
 
 type File = (FileID, FileSize)
@@ -31,6 +32,7 @@ class Cache a where
 
 getCacheStatistic :: Cache a => String -> a -> IO CacheStatistic
 getCacheStatistic fileName cache = (`calculateHits` cache) `forEachFileRequestIn` fileName
+--getCacheStatistic fileName cache = (fst . foldl' calculateHits' ((0, 0), cache)) `forEachFileRequestIn` fileName
 
 calculateHits :: Cache a => [FileRequest] -> a -> CacheStatistic
 calculateHits [] _ = (0, 0)
@@ -46,6 +48,20 @@ calculateHits ((Remove, fileID, fileSize) : rest) cache =
   let file = (fileID, fileSize)
       updatedCache = remove file cache
   in calculateHits rest updatedCache
+
+calculateHits' :: Cache a => (CacheStatistic, a) -> FileRequest -> (CacheStatistic, a)
+calculateHits' (stats, cache) (Read, fileID, fileSize) =
+    let (readResult, cache') = readFromCache (fileID, fileSize) cache
+    in (boolToCacheStatistic readResult stats, cache')
+calculateHits' (stats, cache) (Write, fileID, fileSize)
+  | writeStrategy cache == Invalidate = (stats, cacheWithoutFile)
+  | otherwise = (stats, file `to` cacheWithoutFile)
+    where file = (fileID, fileSize)
+          cacheWithoutFile = remove file cache
+calculateHits' (stats, cache) (Remove, fileID, fileSize) =
+  let file = (fileID, fileSize)
+      cache' = remove file cache
+  in (stats, cache')
 
 boolToCacheStatistic :: Bool -> CacheStatistic -> CacheStatistic
 boolToCacheStatistic True = hit
