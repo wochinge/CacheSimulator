@@ -22,3 +22,4 @@ src/deprecated
 *.txt
 *.tix
 *.log
+*.sh
