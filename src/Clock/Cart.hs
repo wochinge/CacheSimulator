@@ -112,10 +112,11 @@ pushToOtherWhileReferenced cache =
         then pushToOtherWhileReferenced $ incQ cache { t1 = t1', t2 = t2' }
         else cache
 
+--trace (show (pInBytes cache) ++ " t1: " ++ show (sizeOfT1 cache) ++ " t2: " ++ show (sizeOfT2 cache) ++ " file: " ++ show fileSize)
 freeFor:: Cart -> File -> Cart
-freeFor cache file@(_, fileSize)
+freeFor cache file
     | file `C.fits` cache = cache
-    | sizeT1 + fileSize > pInBytes cache = fromT1ToB1 cache
+    | (sizeT1 > pInBytes cache) || (sizeOfT2 cache == 0) = fromT1ToB1 cache
     | otherwise = fromT2ToB2 cache
     where sizeT1 = sizeOfT1 cache
 
