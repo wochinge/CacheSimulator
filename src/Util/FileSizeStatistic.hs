@@ -6,6 +6,7 @@ module Util.FileSizeStatistic
 ) where
 
 import qualified Data.ByteString.Lazy.Char8 as B (pack, unlines, writeFile)
+import           Data.List                  (foldl')
 import qualified Data.Map.Strict            as M
 import qualified Data.Set                   as S
 import           Request                    (FileID, FileRequest, FileSize,
@@ -25,7 +26,7 @@ saveFileStatisticTo logFileName targetName = do
     B.writeFile targetName $ B.unlines stringStatistic
 
 getFileStatistic :: [FileRequest] -> FileStatistic
-getFileStatistic requests = snd $ foldl fileToStatistic (S.empty, M.empty) requests
+getFileStatistic requests = snd $ foldl' fileToStatistic (S.empty, M.empty) requests
 
 fileToStatistic :: (GatheredFiles, FileStatistic) -> FileRequest -> (GatheredFiles, FileStatistic)
 fileToStatistic (alreadyGathered, statistic) (_, fileId, fileSize)

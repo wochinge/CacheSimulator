@@ -5,6 +5,7 @@ import           Cache                  (Cache, CacheSize, WriteStrategy (..),
 import qualified Clock.Car              as Car
 import qualified Clock.Cart             as Cart
 import           Control.Monad          (when)
+import           Data.Semigroup         ((<>))
 import           Data.Time
 import           Fifo
 import qualified Lru.Lru2Q              as Lru2Q
