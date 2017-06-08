@@ -2,19 +2,21 @@
 module IdealCache
 ( IdealCache (..)
 , getIdealCacheStatistic
+, initFuture
 ) where
 
 import qualified Cache         as C
 import qualified Data.HashPSQ  as H (HashPSQ, alter, delete, empty, insert,
                                      insert, lookup, member, minView)
-import           Data.Maybe    (fromJust, isJust)
+import           Data.List     (foldl')
+import           Data.Maybe    (fromJust, isJust, isNothing)
 import           Data.Sequence (ViewL (..), ViewR (..))
 import qualified Data.Sequence as S
+import           Debug.Trace   (trace)
 import           Request       (FileID, FileRequest, FileSize, RequestType (..),
                                 forEachFileRequestIn)
-
 type FilePrio = Int
-data Version = Same | Changed deriving Eq
+data Version = Same | Changed deriving (Eq, Show)
 data Empty = Empty
 
 type OtherRequest = (Version, Maybe FilePrio)
@@ -43,8 +45,9 @@ getIdealCacheStatistic cache logFileName =
 readFromCache :: C.File -> IdealCache -> (Bool, IdealCache)
 readFromCache f@(fileId, _) cache
     | inCache = (True, updateFuture f cache)
-    | otherwise = (False, f `to` cache)
+    | otherwise = (False, f `to` cache')
     where inCache = H.member fileId $ futureCached cache
+          cache' = snd $ currentRequestToPast f cache
 
 remove :: C.File -> IdealCache -> IdealCache
 remove (fileId, fileSize) cache =
@@ -102,6 +105,10 @@ initFuture (request@(_, fileId, _) : rest) prio cache =
         nextPrio = prio - 1
     in initFuture rest nextPrio cache { future = future' }
 
+initFuture' :: [FileRequest] -> FilePrio -> IdealCache -> IdealCache
+initFuture' requests prio cache = fst $ foldl' alter (cache, prio) requests
+    where alter (c, p) r@(_, fileId, _) = (c { future = snd $ H.alter (alter' r p) fileId $ future cache }, p - 1)
+
 alter' :: FileRequest -> FilePrio -> Maybe (FilePrio, S.Seq OtherRequest) -> (Empty, Maybe (FilePrio, S.Seq OtherRequest))
 alter' (Read, _, _) prio Nothing = (Empty, Just (prio, S.empty))
 alter' (Read, _, _) prio (Just (oldPrio, otherRequests)) = (Empty, Just (oldPrio, addToOtherRequests prio otherRequests))
@@ -116,17 +123,13 @@ addToOtherRequests prio otherRequests
     where rest :> (_, prioOfLast) = S.viewr otherRequests
 
 addNewFileVersion :: S.Seq OtherRequest -> S.Seq OtherRequest
-addNewFileVersion requests
-    | S.null requests = S.empty
-    | statusOfNext == Changed = requests
-    | otherwise = requests S.|> (Changed, Nothing)
-    where rest :> (statusOfNext, _) = S.viewr requests
+addNewFileVersion requests = requests S.|> (Changed, Nothing)
 
 switchToNewFileVersion :: Maybe (FilePrio, S.Seq OtherRequest) -> (Empty, Maybe (FilePrio, S.Seq OtherRequest))
 switchToNewFileVersion Nothing = (Empty, Nothing)
 switchToNewFileVersion v@(Just (_, others))
     | S.null others = (Empty, Nothing)
     | fileStatus == Changed && isJust maybePrio = (Empty, Just (prio, rest))
-    | otherwise = error "Should not happen"
+    | otherwise = (Empty, Just (0, rest))
     where (fileStatus, maybePrio) :< rest = S.viewl others
           prio = fromJust maybePrio

@@ -11,7 +11,7 @@ import           Cache
 import           IdealCache
 import           Request
 
-initialCache = empty 1000 AddToCache :: IdealCache
+initialCache = ((0, 0), empty 1000 AddToCache :: IdealCache)
 
 requestsFittingInCache = [ (Read, "1", 500)
                          , (Read, "2", 500)
@@ -28,10 +28,18 @@ requestsExceedingMaxCacheSize = [ (Read, "1", 500) -- fail
                                 , (Read, "1", 500)  -- fail
                                 ]
 
+requestsWithRemove = [ (Read, "1", 500) -- fail
+                     , (Read, "2", 500) -- fail
+                     , (Read, "3", 500) -- fail
+                     , (Remove, "1", 500)
+                     , (Read, "1", 500) -- fail
+                     , (Read, "2", 500) -- hit
+                     ]
+
 hitsWith :: [FileRequest] -> (Int, Int)
 hitsWith requests =
-    let preparedCache = initFuture requests 100 initialCache
-    in calculateHits requests preparedCache
+    let (stats, initial) = initialCache
+    in calculateHits requests (stats, initFuture requests 100 initial)
 
 spec :: Spec
 spec = describe "Testing ideal caching" $ do
@@ -39,3 +47,5 @@ spec = describe "Testing ideal caching" $ do
         hitsWith requestsFittingInCache `shouldBe` (2, 2)
     it "Test with files exceeding space (file with most future access should be evicted)" $
         hitsWith requestsExceedingMaxCacheSize `shouldBe` (3, 4)
+    it "Test with write requests" $
+        hitsWith requestsWithRemove `shouldBe` (1, 4)
