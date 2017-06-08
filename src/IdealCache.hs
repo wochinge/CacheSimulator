@@ -1,4 +1,4 @@
-
+{-# LANGUAGE StrictData #-}
 module IdealCache
 ( IdealCache (..)
 , getIdealCacheStatistic
@@ -9,7 +9,7 @@ import qualified Cache         as C
 import qualified Data.HashPSQ  as H (HashPSQ, alter, delete, empty, insert,
                                      insert, lookup, member, minView)
 import           Data.List     (foldl')
-import           Data.Maybe    (fromJust, isJust, isNothing)
+import           Data.Maybe    (fromJust, fromMaybe, isJust, isNothing)
 import           Data.Sequence (ViewL (..), ViewR (..))
 import qualified Data.Sequence as S
 import           Debug.Trace   (trace)
@@ -46,7 +46,7 @@ readFromCache :: C.File -> IdealCache -> (Bool, IdealCache)
 readFromCache f@(fileId, _) cache
     | inCache = (True, updateFuture f cache)
     | otherwise = (False, f `to` cache')
-    where inCache = H.member fileId $ futureCached cache
+    where inCache = trace (show $ future cache) H.member fileId $ futureCached cache
           cache' = snd $ currentRequestToPast f cache
 
 remove :: C.File -> IdealCache -> IdealCache
@@ -95,7 +95,7 @@ updateRequest x@(Just (_, others))
     | nextStatus == Changed = (0, Just(0, others))
     | otherwise = (prio, Just (prio, rest))
     where (nextStatus, maybePrio) :< rest = S.viewl others
-          Just prio = maybePrio
+          prio = fromMaybe 0 maybePrio
 
 -- Initial preparation of the future requests
 initFuture :: [FileRequest] -> FilePrio -> IdealCache -> IdealCache
@@ -130,6 +130,6 @@ switchToNewFileVersion Nothing = (Empty, Nothing)
 switchToNewFileVersion v@(Just (_, others))
     | S.null others = (Empty, Nothing)
     | fileStatus == Changed && isJust maybePrio = (Empty, Just (prio, rest))
-    | otherwise = (Empty, Just (0, rest))
+    | otherwise = (Empty, Just (0, others))
     where (fileStatus, maybePrio) :< rest = S.viewl others
           prio = fromJust maybePrio
