@@ -89,7 +89,7 @@ currentRequestToPast (fileId, _) cache =
 updateRequest :: Maybe (FilePrio, S.Seq OtherRequest) -> (FilePrio, Maybe (FilePrio, S.Seq OtherRequest))
 updateRequest x@(Just (_, others))
     | S.null others = (0, Nothing) -- no more requests for this can, thus can be deleted
-    | nextStatus == Changed = (0, x)
+    | nextStatus == Changed = (0, Just(0, others))
     | otherwise = (prio, Just (prio, rest))
     where (nextStatus, maybePrio) :< rest = S.viewl others
           Just prio = maybePrio
@@ -112,7 +112,7 @@ addToOtherRequests :: FilePrio -> S.Seq OtherRequest -> S.Seq OtherRequest
 addToOtherRequests prio otherRequests
     | S.null otherRequests = S.singleton (Same, Just prio)
     | isJust prioOfLast = otherRequests S.|> (Same, Just prio)
-    | otherwise = otherRequests S.|> (Changed, Just prio)
+    | otherwise = rest S.|> (Changed, Just prio)
     where rest :> (_, prioOfLast) = S.viewr otherRequests
 
 addNewFileVersion :: S.Seq OtherRequest -> S.Seq OtherRequest
@@ -122,11 +122,11 @@ addNewFileVersion requests
     | otherwise = requests S.|> (Changed, Nothing)
     where rest :> (statusOfNext, _) = S.viewr requests
 
-switchToNewFileVersion :: Maybe (FilePrio, S.Seq OtherRequest) -> (FilePrio, Maybe (FilePrio, S.Seq OtherRequest))
-switchToNewFileVersion Nothing = (0, Nothing)
+switchToNewFileVersion :: Maybe (FilePrio, S.Seq OtherRequest) -> (Empty, Maybe (FilePrio, S.Seq OtherRequest))
+switchToNewFileVersion Nothing = (Empty, Nothing)
 switchToNewFileVersion v@(Just (_, others))
-    | S.null others = (0, v)
-    | fileStatus == Changed && isJust maybePrio = (prio, Just (prio, rest))
-    | otherwise = (0, v)
+    | S.null others = (Empty, Nothing)
+    | fileStatus == Changed && isJust maybePrio = (Empty, Just (prio, rest))
+    | otherwise = error "Should not happen"
     where (fileStatus, maybePrio) :< rest = S.viewl others
           prio = fromJust maybePrio
