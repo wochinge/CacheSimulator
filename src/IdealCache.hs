@@ -46,7 +46,7 @@ readFromCache :: C.File -> IdealCache -> (Bool, IdealCache)
 readFromCache f@(fileId, _) cache
     | inCache = (True, updateFuture f cache)
     | otherwise = (False, f `to` cache')
-    where inCache = trace (show $ future cache) H.member fileId $ futureCached cache
+    where inCache = H.member fileId $ futureCached cache
           cache' = snd $ currentRequestToPast f cache
 
 remove :: C.File -> IdealCache -> IdealCache
