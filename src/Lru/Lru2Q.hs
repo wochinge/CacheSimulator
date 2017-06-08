@@ -26,7 +26,7 @@ instance C.Cache Lru2Q where
 empty' :: C.CacheSize -> C.WriteStrategy-> Lru2Q
 empty' maxCacheSize ws =
     let amList = C.empty maxCacheSize ws :: Lru.Lru
-        ainList = C.empty (maximumSizeAIn maxCacheSize) ws
+        ainList = C.empty maxCacheSize ws
         aoutList = C.empty (maxCacheSize `div` 2) ws
     in Lru2Q amList ainList aoutList maxCacheSize ws
 
@@ -51,7 +51,7 @@ readFromCache file cache
 
 toAin :: C.File -> Lru2Q -> Lru.Lru
 toAin file@(_, fileSize) cache
-    | fileSize > maximumSizeAIn (maxSize cache) = ain cache
+    | fileSize > maxSize cache = ain cache
     | file `C.fits` cache = file `C.to` ain cache
     | otherwise = file `toAin` free2Q cache
 
