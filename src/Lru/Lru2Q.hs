@@ -63,9 +63,10 @@ toAm file@(_, fileSize) cache
 
 free2Q :: Lru2Q -> Lru2Q
 free2Q cache
-    | C.size (ain cache) > maximumSizeAIn (maxSize cache) = cache {ain = ain', aout = removed `C.to` aout cache }
+    | C.size (ain cache) > maximumSizeAIn (maxSize cache) || amIsEmpty = cache {ain = ain', aout = removed `C.to` aout cache }
     | otherwise = cache {am = Lru.removeLRU $ am cache}
     where (removed, ain') = Lru.removeAndRetrieveLRU $ ain cache
+          amIsEmpty = 0 == C.size (am cache)
 
 maximumSizeAIn :: C.CacheSize -> C.CacheSize
 maximumSizeAIn maxCacheSize = maxCacheSize `div` 4

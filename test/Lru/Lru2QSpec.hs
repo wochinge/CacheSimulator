@@ -56,6 +56,11 @@ testAmCache = [ (Read, "1", 400)  -- fail
               , (Read, "1", 400)  -- hit, still in am
               , (Read, "3", 200)  -- fail
               ]
+
+removeFromAiThoughItDoesNotExceedTargetSize = [ (Read, "1", 250)
+                                              , (Read, "2", 800)
+                                              , (Read, "3", 100) -- to avoid laziness effect
+                                              ]
 spec :: Spec
 spec = describe "Testing 2Q caching" $ do
     it "Simple test for files which should be in cache (expect for the first request)" $
@@ -68,3 +73,5 @@ spec = describe "Testing 2Q caching" $ do
         calculateHits noReadRequests initialCache `shouldBe` (0, 0)
     it "Test correct am cache" $
         calculateHits testAmCache initialCache `shouldBe` (4, 7)
+    it "Test remove from ain though it does not exceed target size but am is empty" $
+        calculateHits removeFromAiThoughItDoesNotExceedTargetSize initialCache `shouldBe` (0, 3)
