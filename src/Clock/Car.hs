@@ -72,7 +72,7 @@ fromB2toT2 file cache =
 replace :: File -> Car -> Car
 replace file@(_, fileSize) cache
     | file `C.fits` cache = cache
-    | sizeT1 > 0 && fromIntegral (sizeT1 + fileSize) >= pInBytes cache = replace file $ fromT1ToB1 cache
+    | sizeT1 > 0 && (fromIntegral (sizeT1 + fileSize) >= pInBytes cache) = replace file $ fromT1ToB1 cache
     | otherwise = replace file $ fromT2ToB2 cache
     where
         sizeT1 = sizeOfT1 cache
