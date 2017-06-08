@@ -11,7 +11,7 @@ import           Cache
 import           Fifo
 import           Request
 
-initialCache = empty 1000 AddToCache :: Fifo
+initialCache = ((0, 0), empty 1000 AddToCache :: Fifo)
 
 requestsExceedingMaxSize =
     [ (Read, "1", 100)

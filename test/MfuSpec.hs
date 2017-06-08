@@ -11,7 +11,7 @@ import           Cache
 import           Mfu
 import           Request
 
-initialCache = empty 1000 AddToCache :: Mfu
+initialCache = ((0, 0), empty 1000 AddToCache :: Mfu)
 
 testRequests1 = [ (Read, "1", 500) -- fail
                 , (Read, "2", 500)  -- fail

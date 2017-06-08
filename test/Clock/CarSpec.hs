@@ -11,7 +11,7 @@ import           Cache
 import           Clock.Car
 import           Request
 
-initialCache = empty 1000 AddToCache :: Car
+initialCache = ((0, 0), empty 1000 AddToCache :: Car)
 
 onlyReadsWhichShouldHit = [ (Read, "1", 500) -- fail
                           , (Read, "1", 500) -- hit, pageReference = 1

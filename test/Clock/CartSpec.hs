@@ -11,7 +11,7 @@ import           Cache
 import           Clock.Cart
 import           Request
 
-initialCache = empty 1000 AddToCache :: Cart
+initialCache = ((0, 0), empty 1000 AddToCache :: Cart)
 
 onlyReadsWhichShouldHit = [ (Read, "1", 500) -- fail
                           , (Read, "1", 500) -- hit, pageReference = 1

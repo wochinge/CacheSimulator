@@ -11,7 +11,7 @@ import           Cache
 import           Lru.Lru2Q
 import           Request
 
-initialCache = empty 1000 AddToCache :: Lru2Q
+initialCache = ((0, 0), empty 1000 AddToCache :: Lru2Q)
 
 onlyReadsWhichShouldHit = [ (Read, "1", 500) -- fail
                           , (Read, "2", 500)  -- fail
