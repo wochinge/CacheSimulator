@@ -42,6 +42,15 @@ requestWithInitialRemove = [ (Remove, "1", 500)
                            , (Read, "2", 500)
                            ]
 
+requestWithSeveralInitialRemoves = [ (Write, "1", 500)
+                                   , (Remove, "1", 500)
+                                   , (Read, "1", 500)
+                                   , (Read, "2", 500)
+                                   , (Read, "3", 100)
+                                   , (Read, "1", 500)
+                                   , (Read, "2", 500)
+                                   ]
+
 hitsWith :: [FileRequest] -> (Int, Int)
 hitsWith requests =
     let (stats, initial) = initialCache
@@ -57,3 +66,5 @@ spec = describe "Testing ideal caching" $ do
         hitsWith requestsWithRemove `shouldBe` (1, 4)
     it "Test what happens if a remove is there before a read" $
         hitsWith requestWithInitialRemove `shouldBe` (1, 2)
+    it "Test several removes before a read" $
+        hitsWith requestWithSeveralInitialRemoves `shouldBe` (1, 4)

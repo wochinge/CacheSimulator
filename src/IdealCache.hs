@@ -6,8 +6,8 @@ module IdealCache
 ) where
 
 import qualified Cache         as C
-import qualified Data.HashPSQ  as H (HashPSQ, alter, delete, empty, insert,
-                                     insert, lookup, member, minView)
+import qualified Data.HashPSQ  as H (HashPSQ, alter, delete, deleteView, empty,
+                                     insert, insert, lookup, member, minView)
 import           Data.List     (foldl')
 import           Data.Maybe    (fromJust, fromMaybe, isJust, isNothing)
 import           Data.Sequence (ViewL (..), ViewR (..))
@@ -50,12 +50,15 @@ readFromCache f@(fileId, _) cache
           cache' = snd $ currentRequestToPast f cache
 
 remove :: C.File -> IdealCache -> IdealCache
-remove (fileId, fileSize) cache =
+remove (fileId, _) cache =
     let (_, future') = H.alter switchToNewFileVersion fileId $ future cache
-    in cache { futureCached =  H.delete fileId $ futureCached cache
-             , size = size cache - fileSize
-             , future = future'
-             }
+        removed = H.deleteView fileId $ futureCached cache
+    in case removed of
+        Just (_, fileSize, futureCached') -> cache { futureCached =  futureCached'
+                                                        , size = size cache - fileSize
+                                                        , future = future'
+                                                        }
+        _ -> cache { future = future' }
 
 to :: C.File -> IdealCache -> IdealCache
 to file@(fileId, fileSize) cache
@@ -112,7 +115,7 @@ initFuture' requests prio cache = fst $ foldl' alter (cache, prio) requests
 alter' :: FileRequest -> FilePrio -> Maybe (FilePrio, S.Seq OtherRequest) -> (Empty, Maybe (FilePrio, S.Seq OtherRequest))
 alter' (Read, _, _) prio Nothing = (Empty, Just (prio, S.empty))
 alter' (Read, _, _) prio (Just (oldPrio, otherRequests)) = (Empty, Just (oldPrio, addToOtherRequests prio otherRequests))
-alter' (_, _, _) _ Nothing = (Empty, Nothing)
+alter' (_, _, _) _ Nothing = (Empty, Just (0, addNewFileVersion S.empty))
 alter' (_, _, _) _ (Just (prio, otherRequests)) = (Empty, Just (prio, addNewFileVersion otherRequests))
 
 addToOtherRequests :: FilePrio -> S.Seq OtherRequest -> S.Seq OtherRequest
@@ -130,6 +133,6 @@ switchToNewFileVersion Nothing = (Empty, Nothing)
 switchToNewFileVersion v@(Just (_, others))
     | S.null others = (Empty, Nothing)
     | fileStatus == Changed && isJust maybePrio = (Empty, Just (prio, rest))
-    | otherwise = (Empty, Just (0, others))
+    | otherwise = (Empty, Just (0, rest))
     where (fileStatus, maybePrio) :< rest = S.viewl others
           prio = fromJust maybePrio
