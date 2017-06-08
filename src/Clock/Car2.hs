@@ -25,8 +25,8 @@ instance C.Cache Car where
     to = to
     empty maxCacheSize ws = Car { t1 = Clock.empty
                                            , t2 = Clock.empty
-                                           , b1 = C.empty maxCacheSize ws
-                                           , b2 = C.empty maxCacheSize ws
+                                           , b1 = C.empty maxBound ws
+                                           , b2 = C.empty maxBound ws
                                            , p = 0
                                            , maxSize = maxCacheSize
                                            , writeStrategy = ws

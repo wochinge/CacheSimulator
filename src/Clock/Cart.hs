@@ -31,8 +31,8 @@ instance C.Cache Cart where
     to = to
     empty maxCacheSize ws = Cart { t1 = CC.empty
                                             , t2 = CC.empty
-                                            , b1 = C.empty maxCacheSize ws
-                                            , b2 = C.empty maxCacheSize ws
+                                            , b1 = C.empty maxBound ws
+                                            , b2 = C.empty maxBound ws
                                             , p = 0.0
                                             , q = 0
                                             , sizeShortTerm = 0
@@ -112,7 +112,6 @@ pushToOtherWhileReferenced cache =
         then pushToOtherWhileReferenced $ incQ cache { t1 = t1', t2 = t2' }
         else cache
 
---trace (show (pInBytes cache) ++ " t1: " ++ show (sizeOfT1 cache) ++ " t2: " ++ show (sizeOfT2 cache) ++ " file: " ++ show fileSize)
 freeFor:: Cart -> File -> Cart
 freeFor cache file
     | file `C.fits` cache = cache
