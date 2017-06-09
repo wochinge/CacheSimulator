@@ -44,8 +44,8 @@ executable CacheSimulator-exe
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N8 -O2 -optc-O3 -optc-ffast-math -Wall
-  extra-lib-dirs:      /usr/local/opt/llvm/lib
-  extra-libraries:     llvm
+  -- extra-lib-dirs:      /usr/local/opt/llvm/lib
+  -- extra-libraries:     llvm
   build-depends:       base
                      , CacheSimulator
                      , time
