@@ -2,6 +2,25 @@
 
 This is a small program do simulate different caching algorithms.
 
+# Execute
+
+```bash
+# Install haskell
+sudo apt-get haskell-platform
+
+# Get stack
+curl -sSL https://get.haskellstack.org/ | sh
+
+# Clone the project and initialize stack
+git clone https://github.com/wochinge/CacheSimulator.git
+cd CacheSimulator
+stack setup
+stack build
+
+# Execute with arguments of your choice, e.g.:
+stack exec CacheSimulator-exe -- --cacheSize 123456 --ideal --writeAddsToCache --logfile ~/logfiles/file1
+```
+
 ## Options
 -   `--logfile`: Describes the path to your log file
 -   `--help`: Shows all Options
@@ -10,7 +29,11 @@ This is a small program do simulate different caching algorithms.
 -   `--lru`: Simulates a LRU cache
 -   `--mfu`: Simulates a MFU cache
 -   `--2q`: Simulates 2q (similar to Lru-2)
+-   `--car`: Simulates a CAR cache (<http://www.cse.iitd.ernet.in/~sbansal/pubs/fast04.pdf>)
+-   `--cart`: Simulates a CART cache (<http://www.cse.iitd.ernet.in/~sbansal/pubs/fast04.pdf>)
+-   `--ideal`: Simulates a ideal cache (ideal cache = algorithm which knows the future)
 -   `--cacheSize`: Allows you to set a cache size in bytes (default: 1 GB)
+-   `--writeAddsToCache`: Whenver a file is written, it is also instantly added to the cache
 
 ## Requirements
 To do so, you need a log file, which has lines in the following form:
