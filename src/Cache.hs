@@ -12,7 +12,6 @@ module Cache
     )
     where
 
-import           Data.List (foldl')
 import           Prelude   hiding (fail)
 import           Request
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE StrictData #-}
-module IdealCache
-( IdealCache (..)
-, getIdealCacheStatistic
+module BeladyCache
+( BeladyCache (..)
+, getBeladyCacheStatistic
 , initFuture
 ) where
 
@@ -21,35 +21,35 @@ data Empty = Empty
 
 type OtherRequest = (Version, Maybe FilePrio)
 
-data IdealCache = IdealCache { futureCached :: H.HashPSQ FileID FilePrio FileSize
+data BeladyCache = BeladyCache { futureCached :: H.HashPSQ FileID FilePrio FileSize
                              , size :: C.CacheSize
                              , maxSize :: C.CacheSize
                              , future :: H.HashPSQ FileID FilePrio (S.Seq OtherRequest)
                              , writeStrategy :: C.WriteStrategy
                              }
 
-instance C.Cache IdealCache where
+instance C.Cache BeladyCache where
     size = size
     maxSize = maxSize
     writeStrategy = writeStrategy
     readFromCache = readFromCache
     remove = remove
     to = to
-    empty maxCacheSize = IdealCache H.empty 0 maxCacheSize H.empty
+    empty maxCacheSize = BeladyCache H.empty 0 maxCacheSize H.empty
 
-getIdealCacheStatistic :: IdealCache -> String -> IO C.CacheStatistic
-getIdealCacheStatistic cache logFileName =
+getBeladyCacheStatistic :: BeladyCache -> String -> IO C.CacheStatistic
+getBeladyCacheStatistic cache logFileName =
     let f rs = C.calculateHits rs ((0, 0), initFuture rs 100000000 cache)
     in f `forEachFileRequestIn` logFileName
 
-readFromCache :: C.File -> IdealCache -> (Bool, IdealCache)
+readFromCache :: C.File -> BeladyCache -> (Bool, BeladyCache)
 readFromCache f@(fileId, _) cache
     | inCache = (True, updateFuture f cache)
     | otherwise = (False, f `to` cache')
     where inCache = H.member fileId $ futureCached cache
           cache' = snd $ currentRequestToPast f cache
 
-remove :: C.File -> IdealCache -> IdealCache
+remove :: C.File -> BeladyCache -> BeladyCache
 remove (fileId, _) cache =
     let (_, future') = H.alter switchToNewFileVersion fileId $ future cache
         removed = H.deleteView fileId $ futureCached cache
@@ -60,7 +60,7 @@ remove (fileId, _) cache =
                                                         }
         _ -> cache { future = future' }
 
-to :: C.File -> IdealCache -> IdealCache
+to :: C.File -> BeladyCache -> BeladyCache
 to file@(fileId, fileSize) cache
     | file `C.biggerAsMax` cache = cache
     | file `C.fits` cache = cache { size = size cache + fileSize
@@ -68,26 +68,26 @@ to file@(fileId, fileSize) cache
                                   }
     | otherwise = file `to` free cache
 
-free :: IdealCache -> IdealCache
+free :: BeladyCache -> BeladyCache
 free cache =
     let Just (fileId, _, fileSize, futureCached') = H.minView $ futureCached cache
     in cache { futureCached = futureCached'
              , size = size cache - fileSize
              }
 
-getPrio :: C.File -> IdealCache -> FilePrio
+getPrio :: C.File -> BeladyCache -> FilePrio
 getPrio (fileId, _) cache =
     let futureOfFile = H.lookup fileId $ future cache
     in case futureOfFile of
         Just (prio, _) -> prio
         _              -> 0
 
-updateFuture:: C.File -> IdealCache -> IdealCache
+updateFuture:: C.File -> BeladyCache -> BeladyCache
 updateFuture f@(fileId, fileSize) cache =
     let (newPrio, cache') = currentRequestToPast f cache
     in cache' { futureCached = H.insert fileId newPrio fileSize $ futureCached cache }
 
-currentRequestToPast :: C.File -> IdealCache -> (FilePrio, IdealCache)
+currentRequestToPast :: C.File -> BeladyCache -> (FilePrio, BeladyCache)
 currentRequestToPast (fileId, _) cache =
     let (prio, future') = H.alter updateRequest fileId $ future cache
     in (prio, cache { future = future' })
@@ -101,14 +101,14 @@ updateRequest x@(Just (_, others))
           prio = fromMaybe 0 maybePrio
 
 -- Initial preparation of the future requests
-initFuture :: [FileRequest] -> FilePrio -> IdealCache -> IdealCache
+initFuture :: [FileRequest] -> FilePrio -> BeladyCache -> BeladyCache
 initFuture [] _ cache         = cache
 initFuture (request@(_, fileId, _) : rest) prio cache =
     let (_, future') = H.alter (alter' request prio) fileId $ future cache
         nextPrio = prio - 1
     in initFuture rest nextPrio cache { future = future' }
 
-initFuture' :: [FileRequest] -> FilePrio -> IdealCache -> IdealCache
+initFuture' :: [FileRequest] -> FilePrio -> BeladyCache -> BeladyCache
 initFuture' requests prio cache = fst $ foldl' alter (cache, prio) requests
     where alter (c, p) r@(_, fileId, _) = (c { future = snd $ H.alter (alter' r p) fileId $ future cache }, p - 1)
 

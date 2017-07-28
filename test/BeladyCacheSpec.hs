@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module IdealCacheSpec
+module BeladyCacheSpec
     (spec)
     where
 
 import           Test.Hspec
 import           Test.QuickCheck
 
+import           BeladyCache
 import           Cache
-import           IdealCache
 import           Request
 
-initialCache = ((0, 0), empty 1000 AddToCache :: IdealCache)
+initialCache = ((0, 0), empty 1000 AddToCache :: BeladyCache)
 
 requestsFittingInCache = [ (Read, "1", 500)
                          , (Read, "2", 500)

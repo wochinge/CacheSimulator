@@ -1,5 +1,5 @@
-module Mfu
-    ( Mfu(..)
+module Lfu
+    ( Lfu(..)
     ) where
 import qualified Cache        as C
 import qualified Data.HashPSQ as H (HashPSQ, alter, alterMin, empty, insert)
@@ -8,22 +8,22 @@ import           Request
 import           SimpleCaches (readFromCache')
 
 type FilePrio = Int
-data Mfu = Mfu { files         :: H.HashPSQ FileID FilePrio FileSize
+data Lfu = Lfu { files         :: H.HashPSQ FileID FilePrio FileSize
                , size          :: C.CacheSize
                , maxSize       :: C.CacheSize
                , writeStrategy :: C.WriteStrategy
                }
 
-instance C.Cache Mfu where
+instance C.Cache Lfu where
     to = insert'
     readFromCache = readFromCache' updateCache
     remove = remove'
-    empty = Mfu H.empty 0
+    empty = Lfu H.empty 0
     size = size
     maxSize = maxSize
     writeStrategy = writeStrategy
 
-updateCache :: C.File -> Mfu -> (Bool, Mfu)
+updateCache :: C.File -> Lfu -> (Bool, Lfu)
 updateCache (fileID, _) cache =
     let (itemWasInCache, files') = H.alter updateItem fileID $ files cache
     in (itemWasInCache, cache {files = files'})
@@ -32,14 +32,14 @@ updateItem ::  Maybe (FilePrio, FileSize) -> (Bool, Maybe (FilePrio, FileSize))
 updateItem Nothing                 = (False, Nothing)
 updateItem (Just (prio, fileSize)) = (True, Just (prio + 1, fileSize))
 
-insert' :: C.File -> Mfu -> Mfu
+insert' :: C.File -> Lfu -> Lfu
 insert' f@(fileID, fileSize) cache
     | f `C.biggerAsMax` cache = cache
     | C.fits f cache = cache {files = files', size = size cache + fileSize}
     | otherwise = insert' f (removeLFU cache)
     where files' = H.insert fileID 1 fileSize $ files cache
 
-removeLFU :: Mfu -> Mfu
+removeLFU :: Lfu -> Lfu
 removeLFU cache =
     let (sizeOfRemoved, files') = H.alterMin delete' $ files cache
     in cache {files = files', size = size cache - sizeOfRemoved}
@@ -48,7 +48,7 @@ delete' :: Maybe (FileID, FilePrio, FileSize) -> (FileSize, Maybe (FileID, FileP
 delete' Nothing                 = (0, Nothing)
 delete' (Just (_, _, fileSize)) = (fileSize, Nothing)
 
-remove' :: C.File -> Mfu -> Mfu
+remove' :: C.File -> Lfu -> Lfu
 remove' (fileID, fileSize) cache =
     let (removed, updatedFiles) = H.alter (\f -> (isJust f, Nothing)) fileID $ files cache
         currentSize = size cache

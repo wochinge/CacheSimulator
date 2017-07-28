@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module MfuSpec
+module LfuSpec
     (spec)
     where
 
@@ -8,10 +8,10 @@ import           Test.Hspec
 import           Test.QuickCheck
 
 import           Cache
-import           Mfu
+import           Lfu
 import           Request
 
-initialCache = ((0, 0), empty 1000 AddToCache :: Mfu)
+initialCache = ((0, 0), empty 1000 AddToCache :: Lfu)
 
 testRequests1 = [ (Read, "1", 500) -- fail
                 , (Read, "2", 500)  -- fail
@@ -52,8 +52,8 @@ allFittingsRequests = [ (Read, "1", 200) -- fail
                       ]
 
 spec :: Spec
-spec = describe "Testing MFU caching" $ do
-    it "Test removing of mfu" $
+spec = describe "Testing Lfu caching" $ do
+    it "Test removing of Lfu" $
         calculateHits testRequests1 initialCache `shouldBe` (5, 4)
     it "File should be in cache" $
         calculateHits hitRequests initialCache `shouldBe` (3,1)
