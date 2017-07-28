@@ -17,7 +17,7 @@ data Lru2Q = Lru2Q { am            :: Lru.Lru
 instance C.Cache Lru2Q where
     empty = empty'
     readFromCache = readFromCache
-    to file cache = cache {ain = file `toAin` cache}
+    to file cache = file `toAin` cache
     remove = remove'
     size cache = C.size (am cache) + C.size (ain cache)
     maxSize = maxSize
@@ -41,24 +41,24 @@ remove' file cache =
 
 readFromCache :: C.File -> Lru2Q -> (Bool, Lru2Q)
 readFromCache file cache
-    | inAm = (True, cache { am = am' })
-    | inAout = (False, cache { am = file `toAm` cache, aout = aout' })
     | inAin = (True, cache)
-    | otherwise = (False, cache { ain = file `toAin` cache })
+    | inAm = (True, cache { am = am' })
+    | inAout = (False, file `toAm` cache { aout = aout' })
+    | otherwise = (False, file `toAin` cache)
     where (inAm, am') = file `Lru.updateCache` am cache
           (inAout, aout') = file `Lru.removeMaybe` aout cache
           inAin = file `Lru.inCache` ain cache
 
-toAin :: C.File -> Lru2Q -> Lru.Lru
-toAin file@(_, fileSize) cache
-    | fileSize > maxSize cache = ain cache
-    | file `C.fits` cache = file `C.to` ain cache
+toAin :: C.File -> Lru2Q -> Lru2Q
+toAin file@(fileId, fileSize) cache
+    | fileSize > maxSize cache = cache
+    | file `C.fits` cache = cache { ain = file `C.to` ain cache }
     | otherwise = file `toAin` free2Q cache
 
-toAm :: C.File -> Lru2Q -> Lru.Lru
-toAm file@(_, fileSize) cache
-    | fileSize > maxSize cache - (C.size . ain $ cache) = am cache
-    | file `C.fits` cache = file `C.to` am cache
+toAm :: C.File -> Lru2Q -> Lru2Q
+toAm file@(fileId, fileSize) cache
+    | fileSize > maxSize cache = cache
+    | file `C.fits` cache = cache { am = file `C.to` am cache }
     | otherwise = file `toAm` free2Q cache
 
 free2Q :: Lru2Q -> Lru2Q
