@@ -27,11 +27,11 @@ stack exec CacheSimulator-exe -- --cacheSize 123456 --ideal --writeAddsToCache -
 -   `--size`: Calculates the minimal storage which would be needed to store all files
     (this is use useful if you want to set your cache size to fractions of the whole storage)
 -   `--lru`: Simulates a LRU cache
--   `--mfu`: Simulates a MFU cache
+-   `--lfu`: Simulates a LFU cache
 -   `--2q`: Simulates 2q (similar to Lru-2)
 -   `--car`: Simulates a CAR cache (<http://www.cse.iitd.ernet.in/~sbansal/pubs/fast04.pdf>)
 -   `--cart`: Simulates a CART cache (<http://www.cse.iitd.ernet.in/~sbansal/pubs/fast04.pdf>)
--   `--ideal`: Simulates a ideal cache (ideal cache = algorithm which knows the future)
+-   `--belady`: Simulates a ideal Belady cache (Belady cache = algorithm which knows the future)
 -   `--cacheSize`: Allows you to set a cache size in bytes (default: 1 GB)
 -   `--writeAddsToCache`: Whenver a file is written, it is also instantly added to the cache
 
