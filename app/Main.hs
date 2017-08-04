@@ -14,6 +14,7 @@ import qualified Lfu
 import qualified Lru.Lru2Q              as Lru2Q
 import qualified Lru.LruHash            as Lru
 import           Options.Applicative    hiding (empty)
+import           Util.AccessFrequency   (getAverageReadsPerFile)
 import           Util.CacheSize         (maxCacheSize)
 import           Util.FileSizeStatistic (saveFileStatisticTo)
 
@@ -30,6 +31,7 @@ data Opts = Opts
     , cacheSize        :: !Int
     , fileStatistic    :: !Bool
     , writeAddsToCache :: !Bool
+    , averageAccessNr  :: !Bool
     }
 
 optsParser :: ParserInfo Opts
@@ -56,6 +58,7 @@ programOptions =
                (long "cacheSize" <> metavar "VALUE_IN_BYTE" <> value 1000000000 <> help "Cache size in byte")
          <*> switch (long "fileStatistic" <> help "Print statistic of file sizes to file")
          <*> switch (long "writeAddsToCache" <> help "If true a write also adds the file to the request")
+         <*> switch (long "averageAccessNr" <> help "Calculates the average nr of read requests per file")
 
 main :: IO ()
 main = do
@@ -77,6 +80,7 @@ main = do
     when (fifo options) $ time $ calculateFifo args
     when (belady options) $ time $ calculateBelady args
     when (fileStatistic options) $ time $ saveFileStatisticTo logPath (logPath ++ ".fileStat")
+    when (averageAccessNr options) $ time $ printAverageReadsPerFile args
 
 time :: IO () -> IO ()
 time ioFunc = do
@@ -136,3 +140,9 @@ calculateBelady (logPath, sizeOfCache, strategy) = do
     let cache = empty sizeOfCache strategy :: Belady.BeladyCache
     stat <- Belady.getBeladyCacheStatistic cache logPath
     printStatistic "Belady" stat
+
+printAverageReadsPerFile ::  (String, CacheSize, WriteStrategy) -> IO()
+printAverageReadsPerFile (logPath, _, _) = do
+    putStrLn $ "Calculate average reads per file"
+    result <- getAverageReadsPerFile logPath
+    putStrLn $ "Average accesses per file: " ++ show result
