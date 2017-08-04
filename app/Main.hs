@@ -143,6 +143,7 @@ calculateBelady (logPath, sizeOfCache, strategy) = do
 
 printAverageReadsPerFile ::  (String, CacheSize, WriteStrategy) -> IO()
 printAverageReadsPerFile (logPath, _, _) = do
-    putStrLn $ "Calculate average reads per file"
-    result <- getAverageReadsPerFile logPath
-    putStrLn $ "Average accesses per file: " ++ show result
+    putStrLn "Calculate reads per file statistic"
+    (average, minReads, maxReads) <- getAverageReadsPerFile logPath
+    putStrLn $ "Average accesses per file: " ++ show average
+    putStrLn $ "Min reads: " ++ show minReads ++ ", MaxReads: " ++ show maxReads
