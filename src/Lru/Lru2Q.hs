@@ -50,13 +50,13 @@ readFromCache file cache
           inAin = file `Lru.inCache` ain cache
 
 toAin :: C.File -> Lru2Q -> Lru2Q
-toAin file@(fileId, fileSize) cache
+toAin file@(_, fileSize) cache
     | fileSize > maxSize cache = cache
     | file `C.fits` cache = cache { ain = file `C.to` ain cache }
     | otherwise = file `toAin` free2Q cache
 
 toAm :: C.File -> Lru2Q -> Lru2Q
-toAm file@(fileId, fileSize) cache
+toAm file@(_, fileSize) cache
     | fileSize > maxSize cache = cache
     | file `C.fits` cache = cache { am = file `C.to` am cache }
     | otherwise = file `toAm` free2Q cache

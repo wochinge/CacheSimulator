@@ -15,6 +15,7 @@ import qualified Lru.Lru2Q              as Lru2Q
 import qualified Lru.LruHash            as Lru
 import           Options.Applicative    hiding (empty)
 import           Util.AccessFrequency   (getAverageReadsPerFile)
+import           Util.AverageFileSize   (getAverageFileSize)
 import           Util.CacheSize         (maxCacheSize)
 import           Util.FileSizeStatistic (saveFileStatisticTo)
 
@@ -32,6 +33,7 @@ data Opts = Opts
     , fileStatistic    :: !Bool
     , writeAddsToCache :: !Bool
     , averageAccessNr  :: !Bool
+    , averageFileSize  :: !Bool
     }
 
 optsParser :: ParserInfo Opts
@@ -59,6 +61,7 @@ programOptions =
          <*> switch (long "fileStatistic" <> help "Print statistic of file sizes to file")
          <*> switch (long "writeAddsToCache" <> help "If true a write also adds the file to the request")
          <*> switch (long "averageAccessNr" <> help "Calculates the average nr of read requests per file")
+         <*> switch (long "averageFileSize" <> help "Calculates the average file size and the nr of different files")
 
 main :: IO ()
 main = do
@@ -81,6 +84,7 @@ main = do
     when (belady options) $ time $ calculateBelady args
     when (fileStatistic options) $ time $ saveFileStatisticTo logPath (logPath ++ ".fileStat")
     when (averageAccessNr options) $ time $ printAverageReadsPerFile args
+    when (averageFileSize options) $ time $ printAverageFileSize args
 
 time :: IO () -> IO ()
 time ioFunc = do
@@ -147,3 +151,10 @@ printAverageReadsPerFile (logPath, _, _) = do
     (average, minReads, maxReads) <- getAverageReadsPerFile logPath
     putStrLn $ "Average accesses per file: " ++ show average
     putStrLn $ "Min reads: " ++ show minReads ++ ", MaxReads: " ++ show maxReads
+
+printAverageFileSize ::  (String, CacheSize, WriteStrategy) -> IO()
+printAverageFileSize (logPath, _, _) = do
+    putStrLn "Calculate average file size"
+    (average, nrOfDifferentFiles) <- getAverageFileSize logPath
+    putStrLn $ "Average file size: " ++ show average
+    putStrLn $ "Nr of different files: " ++ show nrOfDifferentFiles
