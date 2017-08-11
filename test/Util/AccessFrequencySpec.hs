@@ -30,6 +30,6 @@ twoRequestsPerFile = [ (Read, "1", 1)
 spec :: Spec
 spec = describe "Testing creation of file size statistics" $ do
     it "1 requests per file" $
-        calculateAverageReadsPerFile oneRequestsPerFile `shouldBe` (1, 1, 1)
+        calculateAverageReadsPerFile oneRequestsPerFile `shouldBe` (1, 1, 1, 1)
     it "2 requests per file" $
-        calculateAverageReadsPerFile twoRequestsPerFile `shouldBe` (2, 2, 2)
+        calculateAverageReadsPerFile twoRequestsPerFile `shouldBe` (2, 2, 2, 2)
